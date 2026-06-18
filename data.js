@@ -199,15 +199,19 @@ const C = {
     p("out_chair",   290, 36, -90),
   ],
   livingSectional: [
-    p("rug_8x10",    235, 162),
-    p("sectional",   240, 162, 180),
-    p("coffee_table",322, 162),
-    p("console_tv",  360, 130, 90),     // TV on the bedroom wall, above the door
-    p("armchair",    118, 120, -30),
-    p("bookshelf",    96,  78),         // book wall on the solid NW wall
-    p("bookshelf",   134,  78),
-    p("bookshelf",   172,  78),
-    p("plant",       338, 196),
+    // TV zone: wall-mounted TV (media console) on the east wall, L-sectional
+    // facing it with the coffee table in front; west side = a conversation nook
+    p("console_tv",  360, 125, 90),     // TV mounted on the east wall, above the door
+    p("rug_8x10",    240, 162),
+    p("sectional",   228, 160, 270),    // L faces east toward the TV
+    p("coffee_table",298, 152),
+    p("armchair",     72, 145,  90),    // conversation nook: two chairs across a table
+    p("armchair",    150, 145, -90),
+    p("side_table",  111, 145),
+    p("bookshelf",    72,  78),         // books on the solid NW wall
+    p("bookshelf",   108,  78),
+    p("bookshelf",   144,  78),
+    p("plant",       335, 200),
   ],
   livingTwoSofa: [
     p("rug_8x10",    235, 162),
