@@ -935,6 +935,19 @@ function suggestionsHTML(){
     <li><strong>Storage:</strong> use the under-stair closet for luggage/seasonal; the W/D closet shelving for household goods. Vertical everywhere — these ceilings are your friend.</li>
   </ul>
 
+  <h2>☯️ Feng Shui review</h2>
+  <p class="lede">A quick consultant's pass on energy flow (chi), command positions, and balance — adapted to this specific unit.</p>
+  <ul>
+    <li><strong>Bed — command position (done in the seed layout):</strong> the bedroom door is in the SW corner, so the bed's headboard goes on the <strong>solid east wall</strong>, diagonally across from the door. You can see anyone entering without being in the door's direct "chi" path, and the head is backed by a solid wall (not glass, and not shared with the bathroom plumbing — both Feng Shui no-nos). Use a <strong>tall, solid/upholstered headboard</strong> ("mountain" support) and keep <strong>both sides of the bed accessible</strong> with a nightstand each (balanced yin/yang for a couple). Avoid storing clutter under the bed.</li>
+    <li><strong>Two nightstands, matched:</strong> symmetry on both sides supports an equal partnership — keep them a pair, with paired lamps.</li>
+    <li><strong>Bathroom doors:</strong> keep the en-suite and guest bath doors closed and drains/lids down — Feng Shui treats drains as chi (and wealth) leaving. A plant or a mirror placement can help; don't hang a mirror facing the bed.</li>
+    <li><strong>Entry / "mouth of chi":</strong> the front door opens into the foyer lane — keep it bright, uncluttered, and give it a clear landing spot (console + mirror, but the mirror should <em>not</em> face the door straight on, or it pushes chi back out). A small rug and good light "invite" energy in.</li>
+    <li><strong>Command position elsewhere:</strong> on the roof landing, angle the <strong>desk so you face the terrace/open view, with a wall behind your back</strong>, not your back to the stairs. Same principle as the bed — see what's coming.</li>
+    <li><strong>Five elements &amp; balance:</strong> the home is heavy on <em>wood</em> (oak floors, walnut kitchen) and <em>metal/water</em> (glass, city views). Warm it with <em>fire</em> (candles, warm lighting, a few red/terracotta accents) and <em>earth</em> (ceramics, stone, the terrace planters) so it doesn't feel cold. The blush wall already adds gentle fire/earth.</li>
+    <li><strong>Flow:</strong> the open living/dining is great for chi, but keep a clear, curving path from the entry to the balcony doors — don't block the sightline with the sofa back. Round/soft-edged coffee and dining tables ease the "sharp chi" of a long rectangular room.</li>
+    <li><strong>Terrace:</strong> abundant plants = growth and vitality; just keep them healthy (remove anything dead/dried promptly). A water feature in the north/east of the terrace can support career/wealth if you want one.</li>
+  </ul>
+
   <p class="lede" style="margin-top:18px">Everything in the planner is to scale and draggable. Try the sectional vs. two-sofa options, slide the dining table along the room, and see what leaves the best flow to the balcony doors. Your layout auto-saves on this device.</p>
   `;
 }

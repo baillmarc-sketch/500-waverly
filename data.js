@@ -165,11 +165,13 @@ window.CATALOG = {
 /* =================== LAYOUT BUILDING BLOCKS =================== */
 const C = {
   bedroom: [
-    p("rug_6x9",     438, 162),
-    p("bed_queen",   438, 165, 180),
-    p("nightstand",  396, 187, 180),
-    p("nightstand",  480, 187, 180),
-    p("dresser",     497, 116, 90),
+    // Feng Shui "command position": headboard on the solid east wall, diagonal
+    // from the SW door, door visible but not in its direct path.
+    p("rug_6x9",     458, 130),
+    p("bed_queen",   467, 130, 90),
+    p("nightstand",  498, 86,  90),
+    p("nightstand",  498, 174, 90),
+    p("dresser",     379, 116, 90),
   ],
   wic: [
     p("wic_shelf",   368, 245, 90),
