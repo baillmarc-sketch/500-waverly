@@ -115,6 +115,32 @@ function overlaps(it){
   return false;
 }
 
+/* rotated half-extents (for wall snapping) */
+function halfExtents(it){
+  const c = cat(it.type), a = it.rot*Math.PI/180, ca=Math.abs(Math.cos(a)), sa=Math.abs(Math.sin(a));
+  return { bw:(c.w*ca + c.h*sa)/2, bh:(c.w*sa + c.h*ca)/2 };
+}
+/* cached axis-aligned wall lines for the current floor (for snap-to-wall) */
+let _wallCache = { floor:null, vx:[], hy:[] };
+function wallLines(){
+  if (_wallCache.floor === state.floor) return _wallCache;
+  const vx=new Set(), hy=new Set();
+  for (const w of (plan().walls||[])){
+    if (w[0]===w[2]) vx.add(w[0]);
+    if (w[1]===w[3]) hy.add(w[1]);
+  }
+  for (const a of plan().areas){
+    const P=a.poly;
+    for (let i=0;i<P.length;i++){
+      const A=P[i], B=P[(i+1)%P.length];
+      if (A[0]===B[0]) vx.add(A[0]);
+      if (A[1]===B[1]) hy.add(A[1]);
+    }
+  }
+  _wallCache = { floor:state.floor, vx:[...vx], hy:[...hy] };
+  return _wallCache;
+}
+
 /* ---------------- view ---------------- */
 function resize(){
   dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -170,6 +196,7 @@ function render(){
     ctx.fillStyle = a.kind === "outdoor" ? "#e7eadf" : "#f3e7d2"; // oak indoors, paver outdoors
     ctx.fill();
     if (a.kind === "outdoor") drawPaverGrid(a.poly);
+    else drawWoodGrain(a.poly);
   }
 
   if (state.showGrid) drawGrid();
@@ -219,7 +246,24 @@ function render(){
 
   ctx.restore();
   drawCompass();
+  drawRotBadge();
   updateHud();
+}
+
+/* angle readout shown while rotating */
+function drawRotBadge(){
+  if (mode !== "rotate" || !state.selected) return;
+  const it = state.selected;
+  const hw = handleWorld(it);
+  const sx = state.panX + hw.x*state.scale, sy = state.panY + hw.y*state.scale;
+  const txt = `${Math.round(((it.rot%360)+360)%360)}°`;
+  ctx.save();
+  ctx.font = "700 12px Inter, sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  const w = ctx.measureText(txt).width + 16;
+  ctx.fillStyle = "#332d27";
+  rr(sx - w/2, sy - 26, w, 20, 6); ctx.fill();
+  ctx.fillStyle = "#f3ece2"; ctx.fillText(txt, sx, sy - 16);
+  ctx.restore();
 }
 
 function drawGuides(){
@@ -262,6 +306,14 @@ function drawPaverGrid(poly){
   ctx.strokeStyle="#d3d8c6"; ctx.lineWidth=1;
   for (let x=Math.ceil(minX/24)*24; x<=maxX; x+=24){ ctx.beginPath(); ctx.moveTo(x,minY); ctx.lineTo(x,maxY); ctx.stroke(); }
   for (let y=Math.ceil(minY/24)*24; y<=maxY; y+=24){ ctx.beginPath(); ctx.moveTo(minX,y); ctx.lineTo(maxX,y); ctx.stroke(); }
+  ctx.restore();
+}
+function drawWoodGrain(poly){
+  ctx.save(); pathPoly(poly); ctx.clip();
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  for (const [x,y] of poly){ minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y); }
+  ctx.strokeStyle = "rgba(150,118,78,.10)"; ctx.lineWidth = 0.8;
+  for (let y=Math.ceil(minY/7)*7; y<=maxY; y+=7){ ctx.beginPath(); ctx.moveTo(minX,y); ctx.lineTo(maxX,y); ctx.stroke(); }
   ctx.restore();
 }
 function drawGrid(){
@@ -384,8 +436,10 @@ function drawPiece(it){
   const w=c.w, h=c.h;
   ctx.lineJoin="round";
   if (c.solid !== false){                       // soft drop shadow for real furniture
+    const lifted = (it === state.selected && mode === "drag");
     ctx.shadowColor = "rgba(50,38,24,.30)";
-    ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
+    ctx.shadowBlur = lifted ? 16 : 6;
+    ctx.shadowOffsetY = lifted ? 9 : 3;
   }
   drawShape(ctx, c.render, w, h, c.fill, { warn });
   ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
@@ -635,12 +689,23 @@ canvas.addEventListener("pointermove", e=>{
     const sel = state.selected;
     let nx = Math.round((w.x-dragDX)/SNAP)*SNAP;
     let ny = Math.round((w.y-dragDY)/SNAP)*SNAP;
-    // snap-align centers to other pieces, show guides (4" threshold)
     const g=[];
+    const { bw, bh } = halfExtents(sel);
+    const WL = wallLines();
+    // 1) snap flush to a wall (edges), else 2) align centers with other pieces
+    let snapX=false, snapY=false;
+    for (const vx of WL.vx){
+      if (Math.abs((nx-bw)-vx) <= 5){ nx=vx+bw; g.push({type:"v",at:vx}); snapX=true; break; }
+      if (Math.abs((nx+bw)-vx) <= 5){ nx=vx-bw; g.push({type:"v",at:vx}); snapX=true; break; }
+    }
+    for (const hy of WL.hy){
+      if (Math.abs((ny-bh)-hy) <= 5){ ny=hy+bh; g.push({type:"h",at:hy}); snapY=true; break; }
+      if (Math.abs((ny+bh)-hy) <= 5){ ny=hy-bh; g.push({type:"h",at:hy}); snapY=true; break; }
+    }
     for (const o of items()){
       if (o===sel || cat(o.type).solid===false) continue;
-      if (Math.abs(o.x-nx) <= 4){ nx=o.x; g.push({type:"v",at:o.x}); }
-      if (Math.abs(o.y-ny) <= 4){ ny=o.y; g.push({type:"h",at:o.y}); }
+      if (!snapX && Math.abs(o.x-nx) <= 4){ nx=o.x; g.push({type:"v",at:o.x}); snapX=true; }
+      if (!snapY && Math.abs(o.y-ny) <= 4){ ny=o.y; g.push({type:"h",at:o.y}); snapY=true; }
     }
     sel.x = nx; sel.y = ny; state.guides = g;
     render();
@@ -960,6 +1025,12 @@ function init(){
   $("#cat-floor-name").textContent = window.FLOORPLAN[state.floor].label;
   resize();
   fitView();
+  try {
+    if (!localStorage.getItem("waverly-tips")){
+      setTimeout(()=> toast("Tip: drag to move · double-tap to rotate · pinch to zoom"), 700);
+      localStorage.setItem("waverly-tips","1");
+    }
+  } catch(e){}
 }
 init();
 

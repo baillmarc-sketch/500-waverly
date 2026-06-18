@@ -199,26 +199,47 @@ const C = {
     p("bookshelf",   116,  72),
     p("plant",       300, 182),
   ],
-  guestRoom2BR: [
-    p("rug_6x9",     205, 116),
-    p("bed_queen",   205, 118),
-    p("nightstand",  165, 80),
-    p("nightstand",  245, 80),
-    p("dresser",     292, 150, 90),
-    p("wardrobe",    170, 168),
-    p("wardrobe",    218, 168),
+  livingFacing: [
+    p("rug_8x10",    200, 150),
+    p("sofa3",       200, 104),         // north sofa, faces in
+    p("loveseat",    200, 196, 180),    // south sofa, faces in
+    p("coffee_table",200, 150),
+    p("armchair",    128, 150, 90),     // end chair toward the TV
+    p("console_tv",  314, 150, 90),
+    p("bookshelf",   314, 100, 90),
+    p("bookshelf",    80,  72),
+    p("bookshelf",   116,  72),
+    p("plant",       300, 182),
   ],
-  livingReduced2BR: [
-    p("loveseat",    250, 215, 180),
-    p("armchair",    300, 255, -35),
-    p("coffee_table",250, 250),
-    p("console_tv",  314, 230, 90),
-    p("plant",       300, 200),
+  livingReading: [
+    p("rug_8x10",    200, 150),
+    p("sofa3",       150, 150, 270),    // faces east toward the TV
+    p("armchair",    234, 112, 200),
+    p("armchair",    234, 190, 160),
+    p("coffee_table",214, 150),
+    p("console_tv",  314, 150, 90),
+    p("bookshelf",   314,  95, 90),     // a wall of books
+    p("bookshelf",   314, 205, 90),
+    p("bookshelf",    80,  72),
+    p("bookshelf",   116,  72),
+    p("plant",       290, 110),
   ],
-  diningReduced2BR: [
-    p("rug_round",   185, 295),
-    p("dining_round",185, 295),
-    p("dining_chair",185, 268, 180), p("dining_chair",157, 295, 90), p("dining_chair",213, 295, -90),
+  livingEntertainer: [
+    p("rug_8x10",    205, 155),
+    p("sectional",   205, 150, 180),
+    p("armchair",    110, 110, -30),
+    p("armchair",    300, 200, -110),
+    p("coffee_table",288, 150),
+    p("console_tv",  314, 150, 90),
+    p("bookshelf",   314,  95, 90),
+    p("plant",       300, 112),
+  ],
+  diningLarge: [
+    p("rug_6x9",     200, 248, 90),
+    p("dining8",     200, 248),
+    p("dining_chair",170, 226, 180), p("dining_chair",200, 226, 180), p("dining_chair",230, 226, 180),
+    p("dining_chair",170, 270),      p("dining_chair",200, 270),      p("dining_chair",230, 270),
+    p("dining_chair",153, 248, 90),  p("dining_chair",247, 248, -90),
   ],
   roof: [
     p("desk",        200, 380, 90),
@@ -240,27 +261,37 @@ const C = {
 };
 
 /* =================== PRESETS =================== */
+const oneBed = (living, dining=C.dining) =>
+  [ ...C.bedroom, ...C.wic, ...living, ...dining, ...C.stools, ...C.balcony ];
+
 window.PRESETS = {
   suggested: {
     name: "Sectional",
-    desc: "Open 1-bed — big L-sectional, TV wall, books, dining for 6.",
-    main: [ ...C.bedroom, ...C.wic, ...C.livingSectional, ...C.dining, ...C.stools, ...C.balcony ],
-    roof: [ ...C.roof ],
+    desc: "Big L-sectional facing the TV wall — the cozy default.",
+    main: oneBed(C.livingSectional), roof: [ ...C.roof ],
   },
   twoSofa: {
-    name: "Two Sofas",
-    desc: "Open 1-bed — sofa + loveseat; easier to rearrange for parties.",
-    main: [ ...C.bedroom, ...C.wic, ...C.livingTwoSofa, ...C.dining, ...C.stools, ...C.balcony ],
-    roof: [ ...C.roof ],
+    name: "L-Sofas",
+    desc: "Sofa + loveseat in an L — flexible, easy to rearrange for parties.",
+    main: oneBed(C.livingTwoSofa), roof: [ ...C.roof ],
   },
-  twoBed: {
-    name: "Convert-back 2-Bed",
-    desc: "Second bedroom carved from the living room (the original 2BR config).",
-    main: [ ...C.bedroom, ...C.wic, ...C.guestRoom2BR, ...C.livingReduced2BR, ...C.diningReduced2BR, ...C.stools, ...C.balcony ],
-    roof: [ ...C.roof ],
+  facing: {
+    name: "Facing Sofas",
+    desc: "Two sofas across a coffee table — conversation-first, great for hosting.",
+    main: oneBed(C.livingFacing), roof: [ ...C.roof ],
+  },
+  reading: {
+    name: "Reading Lounge",
+    desc: "Sofa + two armchairs + a wall of books — leans into the book collection.",
+    main: oneBed(C.livingReading), roof: [ ...C.roof ],
+  },
+  entertainer: {
+    name: "Entertainer",
+    desc: "Sectional, extra lounge chairs and a table for 8 — built for dinners.",
+    main: oneBed(C.livingEntertainer, C.diningLarge), roof: [ ...C.roof ],
   },
 };
-window.PRESET_ORDER = ["suggested", "twoSofa", "twoBed"];
+window.PRESET_ORDER = ["suggested", "twoSofa", "facing", "reading", "entertainer"];
 
 /* the seed layout used on first load / reset */
 window.DEFAULT_LAYOUT = { main: window.PRESETS.suggested.main, roof: window.PRESETS.suggested.roof };
