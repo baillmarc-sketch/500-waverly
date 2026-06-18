@@ -13,6 +13,8 @@ const STORE_KEY = "waverly-ph4-layout-v2";   // bump to discard stale layouts af
 const SNAP = 2;            // position snap, inches
 const ROT_SNAP = 15;      // rotation snap, degrees
 const WALL = 5;           // wall thickness, inches
+const SIDEBAR_W = 300;    // desktop catalog width, px
+const MOBILE = 760;       // breakpoint, px
 
 const state = {
   floor: "main",
@@ -42,9 +44,30 @@ const SWATCHES = [
   "#c79a4b", // ochre
 ];
 
-function toast(msg){
-  const t = $("#toast"); t.textContent = msg; t.hidden = false;
-  clearTimeout(toast._t); toast._t = setTimeout(()=> t.hidden = true, 1900);
+function toast(msg, action){
+  const t = $("#toast"); t.innerHTML = "";
+  const span = document.createElement("span"); span.textContent = msg; t.appendChild(span);
+  if (action){
+    const b = document.createElement("button"); b.className = "toast-btn"; b.textContent = action.label;
+    b.addEventListener("click", ()=>{ t.hidden = true; action.fn(); });
+    t.appendChild(b);
+  }
+  t.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(()=> t.hidden = true, action ? 4500 : 1900);
+}
+
+/* ---------------- undo ---------------- */
+const undoStack = [];
+function snapshot(){
+  const strip = arr => arr.map(({ _id, ...rest }) => rest);
+  return { main: strip(state.layout.main), roof: strip(state.layout.roof) };
+}
+function pushUndo(){ undoStack.push(snapshot()); if (undoStack.length > 40) undoStack.shift(); }
+function undo(){
+  if (!undoStack.length){ toast("Nothing to undo"); return; }
+  state.layout = sanitizeLayout(undoStack.pop());
+  state.selected = null; save(); render();
+  toast("Undone");
 }
 
 const canvas = $("#plan");
@@ -61,15 +84,25 @@ function ftin(inches){
 }
 
 /* ---------------- persistence ---------------- */
+// Validate/repair any layout from storage, import, or a shared link: drop pieces
+// with unknown catalog types, coerce numerics, keep only valid colors, assign ids.
+function sanitizeLayout(layout){
+  const okColor = c => typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c);
+  const clean = fl => (Array.isArray(layout && layout[fl]) ? layout[fl] : [])
+    .filter(it => it && window.CATALOG[it.type])
+    .map(it => {
+      const o = { type: it.type, x: +it.x || 0, y: +it.y || 0, rot: +it.rot || 0, _id: uid++ };
+      if (okColor(it.color)) o.color = it.color;
+      return o;
+    });
+  return { main: clean("main"), roof: clean("roof") };
+}
 function cloneDefault(){
-  const out = { main: [], roof: [] };
-  for (const fl of ["main","roof"])
-    out[fl] = (window.DEFAULT_LAYOUT[fl] || []).map(d => ({ ...d, _id: uid++ }));
-  return out;
+  return sanitizeLayout(window.DEFAULT_LAYOUT);
 }
 function save(){
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({ v:1, layout: state.layout })); }
-  catch(e){ /* private mode etc. */ }
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ v:2, layout: state.layout })); }
+  catch(e){ /* private mode / quota */ }
 }
 function load(){
   try {
@@ -77,9 +110,7 @@ function load(){
     if (!raw) return false;
     const data = JSON.parse(raw);
     if (!data || !data.layout) return false;
-    for (const fl of ["main","roof"])
-      (data.layout[fl] || []).forEach(it => it._id = uid++);
-    state.layout = { main: data.layout.main || [], roof: data.layout.roof || [] };
+    state.layout = sanitizeLayout(data.layout);
     return true;
   } catch(e){ return false; }
 }
@@ -116,20 +147,25 @@ function topItemAt(wx, wy){
 
 /* axis-aligned bbox of rotated item (for overlap hint) */
 function bbox(it){
-  const c = cat(it.type);
+  const c = cat(it.type); if (!c) return null;
   const a = it.rot*Math.PI/180, ca=Math.abs(Math.cos(a)), sa=Math.abs(Math.sin(a));
   const w = c.w*ca + c.h*sa, h = c.w*sa + c.h*ca;
   return { x0:it.x-w/2, y0:it.y-h/2, x1:it.x+w/2, y1:it.y+h/2 };
 }
-function overlaps(it){
-  if (cat(it.type).solid === false) return false;
-  const b = bbox(it);
-  for (const o of items()){
-    if (o===it || cat(o.type).solid===false) continue;
-    const ob = bbox(o);
-    if (b.x0 < ob.x1-3 && b.x1 > ob.x0+3 && b.y0 < ob.y1-3 && b.y1 > ob.y0+3) return true;
+// Build the set of overlapping piece ids once per render (single O(n^2) pass over
+// solid pieces on the current floor) instead of recomputing inside every drawPiece.
+function computeOverlaps(){
+  _overlapSet.clear();
+  const solids = items().filter(it => { const c=cat(it.type); return c && c.solid !== false; });
+  const boxes = solids.map(bbox);
+  for (let i=0;i<solids.length;i++){
+    for (let j=i+1;j<solids.length;j++){
+      const b=boxes[i], ob=boxes[j];
+      if (b.x0 < ob.x1-3 && b.x1 > ob.x0+3 && b.y0 < ob.y1-3 && b.y1 > ob.y0+3){
+        _overlapSet.add(solids[i]._id); _overlapSet.add(solids[j]._id);
+      }
+    }
   }
-  return false;
 }
 
 /* rotated half-extents (for wall snapping) */
@@ -159,23 +195,27 @@ function wallLines(){
 }
 
 /* ---------------- view ---------------- */
+let userAdjusted = false;          // did the user manually zoom/pan since the last fit?
 function resize(){
   dpr = Math.max(1, window.devicePixelRatio || 1);
   const r = canvas.getBoundingClientRect();
   canvas.width  = Math.round(r.width  * dpr);
   canvas.height = Math.round(r.height * dpr);
-  render();
+  // reset any mid-gesture state and re-fit unless the user has framed their own view
+  pointers.clear(); mode = null; pinch = null;
+  if (userAdjusted) render(); else fitView();
 }
 function fitView(){
   const r = canvas.getBoundingClientRect();
   const b = planBounds();
   const pad = 70;
-  const sidebar = (window.innerWidth > 760) ? 300 : 0;        // catalog occupies right on desktop
+  const sidebar = (window.innerWidth > MOBILE) ? SIDEBAR_W : 0;   // catalog docks right on desktop
   const availW = r.width - sidebar - pad*2;
   const availH = r.height - pad*2 - 40;
   state.scale = Math.min(availW / b.w, availH / b.h);
   state.panX = pad + (availW - b.w*state.scale)/2 - b.minX*state.scale;
   state.panY = pad + (availH - b.h*state.scale)/2 - b.minY*state.scale + 6;
+  userAdjusted = false;
   render();
 }
 function zoomAt(cssX, cssY, factor){
@@ -183,14 +223,22 @@ function zoomAt(cssX, cssY, factor){
   state.scale = Math.max(0.2, Math.min(12, state.scale*factor));
   state.panX = cssX - w.x*state.scale;
   state.panY = cssY - w.y*state.scale;
-  render();
+  userAdjusted = true;
+  scheduleRender();
 }
+
+/* coalesce renders to one per animation frame */
+let _raf = 0;
+function scheduleRender(){ if (_raf) return; _raf = requestAnimationFrame(()=>{ _raf = 0; render(); }); }
 
 /* ======================================================================
    RENDER
    ====================================================================== */
+let _overlapSet = new Set();       // ids of pieces overlapping another solid piece (computed per render)
 function render(){
   const r = canvas.getBoundingClientRect();
+  // recompute overlaps once per frame instead of once per piece (was O(n^2) per piece)
+  computeOverlaps();
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,r.width,r.height);
   ctx.save();
@@ -265,6 +313,7 @@ function render(){
   if (state.selected && arr.includes(state.selected)) drawSelection(state.selected);
 
   ctx.restore();
+  drawHandle();
   drawCompass();
   drawRotBadge();
   if (state.meas) drawMeasureLabel();
@@ -300,8 +349,8 @@ function drawMeasureLabel(){
 function drawRotBadge(){
   if (mode !== "rotate" || !state.selected) return;
   const it = state.selected;
-  const hw = handleWorld(it);
-  const sx = state.panX + hw.x*state.scale, sy = state.panY + hw.y*state.scale;
+  const h = handleScreen(it);
+  const sx = h.x, sy = h.y;
   const txt = `${Math.round(((it.rot%360)+360)%360)}°`;
   ctx.save();
   ctx.font = "700 12px Inter, sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
@@ -374,10 +423,10 @@ function drawGrid(){
 function drawAreaLabel(a){
   ctx.save();
   ctx.fillStyle = "#5a5046"; ctx.textAlign="center"; ctx.textBaseline="middle";
-  ctx.font = "700 13px Inter, sans-serif";
+  ctx.font = "800 14px Inter, sans-serif";
   ctx.fillText(a.label.toUpperCase(), a.lx, a.ly);
   if (a.dim && state.showDims){
-    ctx.font = "600 10px Inter, sans-serif"; ctx.fillStyle="#8a7f70";
+    ctx.font = "600 11px Inter, sans-serif"; ctx.fillStyle="#8a7f70";
     ctx.fillText(a.dim, a.lx, a.ly+15);
   }
   ctx.restore();
@@ -385,10 +434,10 @@ function drawAreaLabel(a){
 function drawLabel(l){
   ctx.save();
   ctx.fillStyle = "#6b6054"; ctx.textAlign="center"; ctx.textBaseline="middle";
-  ctx.font = "700 10.5px Inter, sans-serif";
+  ctx.font = "700 11.5px Inter, sans-serif";
   ctx.fillText(l.text.toUpperCase(), l.x, l.y);
   if (l.sub && state.showDims){
-    ctx.font = "600 9px Inter, sans-serif"; ctx.fillStyle="#9a8f80";
+    ctx.font = "600 9.5px Inter, sans-serif"; ctx.fillStyle="#9a8f80";
     ctx.fillText(l.sub, l.x, l.y+12);
   }
   ctx.restore();
@@ -510,7 +559,7 @@ function drawFixture(f){
 /* ---- furniture ---- */
 function drawPiece(it){
   const c = cat(it.type); if (!c) return;
-  const warn = overlaps(it);
+  const warn = _overlapSet.has(it._id);
   ctx.save();
   ctx.translate(it.x, it.y);
   ctx.rotate(it.rot*Math.PI/180);
@@ -527,7 +576,7 @@ function drawPiece(it){
   ctx.restore();
 
   // upright label
-  if (c.solid !== false && Math.min(c.w,c.h)*state.scale > 26){
+  if (c.solid !== false && Math.min(c.w,c.h)*state.scale > 34){
     ctx.save();
     ctx.fillStyle="rgba(35,30,25,.62)"; ctx.textAlign="center"; ctx.textBaseline="middle";
     ctx.font = "600 8px Inter, sans-serif";
@@ -544,7 +593,7 @@ function shortName(n){
 function drawShape(g, render, w, h, fill, opt={}){
   const hw=w/2, hh=h/2;
   const stroke = opt.warn ? "#c2553f" : "rgba(45,35,25,.55)";
-  const lw = opt.thumb ? 1.4 : 1.4;
+  const lw = 1.4;
   g.lineWidth = lw;
   g.strokeStyle = stroke;
   g.fillStyle = fill;
@@ -657,23 +706,32 @@ function shade(hex, amt){
 
 /* ---- selection chrome ---- */
 function drawSelection(it){
-  const c = cat(it.type);
+  const c = cat(it.type); if (!c) return;
   ctx.save();
   ctx.translate(it.x,it.y); ctx.rotate(it.rot*Math.PI/180);
   ctx.strokeStyle="#c08457"; ctx.lineWidth=2; ctx.setLineDash([5,4]);
   rr(-c.w/2-3,-c.h/2-3,c.w+6,c.h+6,5); ctx.stroke();
   ctx.setLineDash([]);
-  // rotate handle stem + knob (toward -y / front)
-  const off=c.h/2+22;
-  ctx.beginPath(); ctx.moveTo(0,-c.h/2); ctx.lineTo(0,-off); ctx.stroke();
-  ctx.beginPath(); ctx.arc(0,-off,7,0,7); ctx.fillStyle="#c08457"; ctx.fill();
-  ctx.strokeStyle="#fff"; ctx.lineWidth=2; ctx.stroke();
   ctx.restore();
 }
-/* rotate-handle position in world coords (toward the piece's -y / "front") */
-function handleWorld(it){
-  const c=cat(it.type); const off=c.h/2+22; const a=it.rot*Math.PI/180;
-  return { x: it.x + Math.sin(a)*off, y: it.y - Math.cos(a)*off };
+/* rotate-handle knob in SCREEN px — constant 26px beyond the piece's front edge,
+   so it stays grabbable at any zoom */
+function handleScreen(it){
+  const c=cat(it.type); const a=it.rot*Math.PI/180;
+  const dx=Math.sin(a), dy=-Math.cos(a);
+  const fe={ x: state.panX+(it.x+dx*(c.h/2))*state.scale, y: state.panY+(it.y+dy*(c.h/2))*state.scale };
+  return { x: fe.x+dx*26, y: fe.y+dy*26, fe };
+}
+/* draw the rotate handle (stem + knob) in screen space, after ctx.restore() */
+function drawHandle(){
+  const it=state.selected; if (!it || !items().includes(it)) return;
+  const h=handleScreen(it);
+  ctx.save();
+  ctx.strokeStyle="#c08457"; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(h.fe.x,h.fe.y); ctx.lineTo(h.x,h.y); ctx.stroke();
+  ctx.beginPath(); ctx.arc(h.x,h.y,8,0,7); ctx.fillStyle="#c08457"; ctx.fill();
+  ctx.strokeStyle="#fff"; ctx.lineWidth=2; ctx.stroke();
+  ctx.restore();
 }
 
 /* ======================================================================
@@ -710,6 +768,7 @@ let mode = null;            // 'drag' | 'rotate' | 'pan' | 'pinch'
 let dragDX=0, dragDY=0, panSX=0, panSY=0, moved=false, downOnEmpty=false;
 let pinch = null;
 let lastTapItem = null, lastTapTime = 0;
+let gestureUndo = false;   // have we already snapshotted this drag/rotate gesture?
 
 function evPos(e){ const r=canvas.getBoundingClientRect(); return { x:e.clientX-r.left, y:e.clientY-r.top }; }
 
@@ -731,19 +790,19 @@ canvas.addEventListener("pointerdown", e=>{
 
   const w = toWorld(pos.x,pos.y);
   if (state.measuring){ mode="measure"; state.meas={ a:{x:w.x,y:w.y}, b:{x:w.x,y:w.y} }; render(); return; }
-  // rotate handle?
+  // rotate handle? (screen-space hit test, generous radius)
   if (state.selected && items().includes(state.selected)){
-    const hp = handleWorld(state.selected);
-    if (Math.hypot((hp.x-w.x)*state.scale,(hp.y-w.y)*state.scale) < 16){ mode="rotate"; return; }
+    const h = handleScreen(state.selected);
+    if (Math.hypot(h.x-pos.x, h.y-pos.y) < 22){ mode="rotate"; gestureUndo=false; return; }
   }
   const hit = topItemAt(w.x,w.y);
   if (hit){
     const now = Date.now();
     if (hit === lastTapItem && now - lastTapTime < 320){   // double-tap → rotate 90°
-      hit.rot = (hit.rot + 90) % 360; save(); lastTapTime = 0;
+      pushUndo(); hit.rot = (hit.rot + 90) % 360; save(); lastTapTime = 0;
     } else { lastTapItem = hit; lastTapTime = now; }
     select(hit);
-    mode="drag"; dragDX=w.x-hit.x; dragDY=w.y-hit.y; downOnEmpty=false;
+    mode="drag"; dragDX=w.x-hit.x; dragDY=w.y-hit.y; downOnEmpty=false; gestureUndo=false;
   } else {
     mode="pan"; panSX=pos.x; panSY=pos.y; downOnEmpty=true;
   }
@@ -756,20 +815,21 @@ canvas.addEventListener("pointermove", e=>{
 
   if (mode==="pinch" && pointers.size>=2){
     const pts=[...pointers.values()];
-    const d=dist(pts[0],pts[1]), m=mid(pts[0],pts[1]);
-    const f = d/pinch.d;
+    const d=Math.max(1e-3, dist(pts[0],pts[1])), m=mid(pts[0],pts[1]);
+    const f = d/Math.max(1e-3, pinch.d);
     const ns = Math.max(0.2, Math.min(12, pinch.scale*f));
     // keep midpoint world-stable using starting transform
     const wx=(pinch.mid.x-pinch.panX)/pinch.scale, wy=(pinch.mid.y-pinch.panY)/pinch.scale;
     state.scale=ns;
     state.panX = m.x - wx*ns;
     state.panY = m.y - wy*ns;
-    render(); return;
+    userAdjusted = true; scheduleRender(); return;
   }
 
   const w = toWorld(pos.x,pos.y);
   if (mode==="drag" && state.selected){
     const sel = state.selected;
+    if (!gestureUndo){ pushUndo(); gestureUndo = true; }   // snapshot once at drag start
     let nx = Math.round((w.x-dragDX)/SNAP)*SNAP;
     let ny = Math.round((w.y-dragDY)/SNAP)*SNAP;
     const g=[];
@@ -791,17 +851,18 @@ canvas.addEventListener("pointermove", e=>{
       if (!snapY && Math.abs(o.y-ny) <= 4){ ny=o.y; g.push({type:"h",at:o.y}); snapY=true; }
     }
     sel.x = nx; sel.y = ny; state.guides = g;
-    render();
+    scheduleRender();
   } else if (mode==="rotate" && state.selected){
+    if (!gestureUndo){ pushUndo(); gestureUndo = true; }
     let ang = Math.atan2(w.y-state.selected.y, w.x-state.selected.x)*180/Math.PI + 90;
     ang = Math.round(ang/ROT_SNAP)*ROT_SNAP;
     state.selected.rot = ((ang%360)+360)%360;
-    render(); updateHud();
+    scheduleRender();
   } else if (mode==="measure" && state.meas){
-    state.meas.b = { x:w.x, y:w.y }; render();
+    state.meas.b = { x:w.x, y:w.y }; scheduleRender();
   } else if (mode==="pan"){
     state.panX += pos.x-panSX; state.panY += pos.y-panSY;
-    panSX=pos.x; panSY=pos.y; render();
+    panSX=pos.x; panSY=pos.y; userAdjusted = true; scheduleRender();
   }
 });
 
@@ -810,9 +871,11 @@ function endPointer(e){
   if (state.guides.length){ state.guides=[]; render(); }
   if (mode==="drag" || mode==="rotate") save();
   if (mode==="pan" && downOnEmpty && !moved){ select(null); }
+  gestureUndo = false;
   if (pointers.size===0){ mode=null; pinch=null; downOnEmpty=false; }
-  else if (pointers.size===1){ // lift from pinch → resume pan
-    const only=[...pointers.values()][0]; mode="pan"; panSX=only.x; panSY=only.y; downOnEmpty=false;
+  else if (pointers.size===1){ // lift from pinch → resume pan from the remaining finger's live position
+    const live=[...pointers.values()][0];
+    mode="pan"; panSX=live.x; panSY=live.y; moved=false; downOnEmpty=false; pinch=null;
   }
 }
 canvas.addEventListener("pointerup", endPointer);
@@ -836,20 +899,23 @@ function buildSwatches(){
   const pop = $("#swatch-pop"); pop.innerHTML = "";
   const reset = document.createElement("button");
   reset.className = "swatch reset"; reset.textContent = "↺"; reset.title = "Default finish";
-  reset.addEventListener("click", ()=>{ if (state.selected){ delete state.selected.color; save(); render(); } });
+  reset.setAttribute("aria-label","Default finish");
+  reset.addEventListener("click", ()=>{ if (state.selected){ pushUndo(); delete state.selected.color; save(); render(); } });
   pop.appendChild(reset);
   for (const hex of SWATCHES){
     const b = document.createElement("button");
-    b.className = "swatch"; b.style.background = hex; b.title = hex;
-    b.addEventListener("click", ()=>{ if (state.selected){ state.selected.color = hex; save(); render(); } });
+    b.className = "swatch"; b.style.background = hex; b.title = hex; b.setAttribute("aria-label","Finish "+hex);
+    b.addEventListener("click", ()=>{ if (state.selected){ pushUndo(); state.selected.color = hex; save(); render(); } });
     pop.appendChild(b);
   }
 }
 
 function addPiece(type){
+  if (!window.CATALOG[type]) return;
   const r = canvas.getBoundingClientRect();
-  const sidebar = (window.innerWidth>760)? 300:0;
+  const sidebar = (window.innerWidth>760)? SIDEBAR_W : 0;
   const center = toWorld((r.width-sidebar)/2, r.height/2);
+  pushUndo();
   const it = { type, x:Math.round(center.x/SNAP)*SNAP, y:Math.round(center.y/SNAP)*SNAP, rot:0, _id:uid++ };
   items().push(it);
   select(it); save();
@@ -859,12 +925,13 @@ function addPiece(type){
 function act(a){
   const it=state.selected; if(!it) return;
   if (a==="color"){ const pop=$("#swatch-pop"); pop.hidden=!pop.hidden; return; }
+  pushUndo();
   if (a==="rot-l") it.rot=(((it.rot-15)%360)+360)%360;
   if (a==="rot-r") it.rot=(it.rot+15)%360;
   if (a==="rot-90") it.rot=(it.rot+90)%360;
   if (a==="dup"){ const n={...it,x:it.x+12,y:it.y+12,_id:uid++}; items().push(n); state.selected=n; }
   if (a==="front"){ const arr=items(); const i=arr.indexOf(it); if(i>=0){ arr.splice(i,1); arr.push(it); } }
-  if (a==="del"){ const arr=items(); const i=arr.indexOf(it); if(i>=0) arr.splice(i,1); state.selected=null; }
+  if (a==="del"){ const arr=items(); const i=arr.indexOf(it); if(i>=0) arr.splice(i,1); state.selected=null; render(); save(); toast("Deleted", { label:"Undo", fn:undo }); return; }
   render(); save();
 }
 
@@ -992,15 +1059,29 @@ function suggestionsHTML(){
    ====================================================================== */
 function switchFloor(fl){
   state.floor=fl; state.selected=null;
-  $$(".fs-btn").forEach(b=>b.classList.toggle("active", b.dataset.floor===fl));
+  $$(".fs-btn").forEach(b=>{ const on=b.dataset.floor===fl; b.classList.toggle("active",on); b.setAttribute("aria-selected", on?"true":"false"); });
   $("#cat-floor-name").textContent = window.FLOORPLAN[fl].label;
   fitView();
 }
-function openCatalog(){ $("#catalog").classList.add("open"); }
-function closeCatalog(){ $("#catalog").classList.remove("open"); }
+function openCatalog(){ $("#catalog").classList.add("open"); $("#catalog-backdrop").hidden = false; }
+function closeCatalog(){ $("#catalog").classList.remove("open"); $("#catalog-backdrop").hidden = true; }
+// swipe the bottom-sheet catalog down to dismiss
+function wireSheetSwipe(){
+  const sheet = $("#catalog");
+  let startY=0, dy=0, dragging=false;
+  const down = e=>{ startY=(e.touches?e.touches[0]:e).clientY; dy=0; dragging=true; sheet.style.transition="none"; };
+  const move = e=>{ if(!dragging) return; dy=Math.max(0,(e.touches?e.touches[0]:e).clientY-startY); sheet.style.transform=`translateY(${dy}px)`; };
+  const up = ()=>{ if(!dragging) return; dragging=false; sheet.style.transition=""; sheet.style.transform=""; if(dy>90) closeCatalog(); };
+  for (const el of [$("#catalog-grab"), $(".catalog-head")]){
+    if(!el) continue;
+    el.addEventListener("touchstart", down, {passive:true});
+    el.addEventListener("touchmove", move, {passive:true});
+    el.addEventListener("touchend", up);
+  }
+}
 
 function exportLayout(){
-  const blob=new Blob([JSON.stringify({ v:1, layout:state.layout }, null, 2)],{type:"application/json"});
+  const blob=new Blob([JSON.stringify({ v:2, layout:state.layout }, null, 2)],{type:"application/json"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a"); a.href=url; a.download="500-waverly-layout.json"; a.click();
   URL.revokeObjectURL(url);
@@ -1009,11 +1090,12 @@ function importLayout(file){
   const fr=new FileReader();
   fr.onload=()=>{ try{
     const d=JSON.parse(fr.result);
-    if(!d.layout) throw 0;
-    for(const fl of ["main","roof"]) (d.layout[fl]||[]).forEach(it=>it._id=uid++);
-    state.layout={ main:d.layout.main||[], roof:d.layout.roof||[] };
+    if(!d || !d.layout) throw 0;
+    pushUndo();
+    state.layout = sanitizeLayout(d.layout);
     state.selected=null; save(); render();
-  }catch(e){ alert("Could not read that layout file."); } };
+    toast("Layout imported");
+  }catch(e){ toast("Couldn't read that layout file"); } };
   fr.readAsText(file);
 }
 
@@ -1026,27 +1108,24 @@ function buildPresetsMenu(){
     const b = document.createElement("button");
     b.className = "menu-item";
     b.innerHTML = `<strong>${pr.name}</strong><small>${pr.desc}</small>`;
-    b.addEventListener("click", ()=>{
-      if (confirm(`Load the "${pr.name}" starter layout? This replaces your current arrangement on both floors.`)){
-        loadPreset(id);
-      }
-      menu.hidden = true;
-    });
+    b.addEventListener("click", ()=>{ menu.hidden = true; loadPreset(id); });  // undoable, no blocking dialog
     menu.appendChild(b);
   }
 }
 function buildMoreMenu(){
   const menu = $("#more-menu");
   const items = [
+    ["↶","Undo",                ()=>undo()],
     ["⌂","Layouts",            ()=>{ $("#more-menu").hidden=true; $("#presets-menu").hidden=false; }],
     ["💡","Decorator ideas",    ()=>$("#btn-suggestions").click()],
-    ["🔗","Share link",         ()=>$("#btn-share").click()],
     ["📏","Measure",            ()=>$("#btn-measure").click()],
+    ["🔗","Share link",         ()=>$("#btn-share").click()],
     ["⟲","Reset to Feng Shui",  ()=>$("#btn-reset").click()],
     ["▦","Toggle grid",         ()=>$("#btn-grid").click()],
     ["⌗","Toggle dimensions",   ()=>$("#btn-dims").click()],
     ["↥","Export layout",       ()=>$("#btn-export").click()],
     ["↧","Import layout",       ()=>$("#btn-import").click()],
+    ["?","How it works",        ()=>$("#btn-help").click()],
   ];
   menu.innerHTML = `<div class="menu-head">Tools</div>`;
   for (const [ico,label,fn] of items){
@@ -1058,33 +1137,34 @@ function buildMoreMenu(){
 }
 function loadPreset(id){
   const pr = window.PRESETS[id];
-  state.layout = {
-    main: pr.main.map(d=>({ ...d, _id:uid++ })),
-    roof: pr.roof.map(d=>({ ...d, _id:uid++ })),
-  };
+  pushUndo();
+  state.layout = sanitizeLayout({ main: pr.main, roof: pr.roof });
   state.selected = null; save(); render();
-  toast(`Loaded "${pr.name}" layout`);
+  toast(`Loaded "${pr.name}"`, { label:"Undo", fn:undo });
 }
 
-/* ---- shareable link (layout encoded in URL hash) ---- */
+/* ---- shareable link (layout encoded in the URL hash, base64url) ---- */
+const b64url = {
+  enc: s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""),
+  dec: s => decodeURIComponent(escape(atob(s.replace(/-/g,"+").replace(/_/g,"/")))),
+};
 function encodeLayout(){
   const enc = fl => state.layout[fl].map(it=>{
     const a=[it.type, it.x, it.y, it.rot]; if (it.color) a.push(it.color); return a;
   });
-  const json = JSON.stringify({ m:enc("main"), r:enc("roof") });
-  return btoa(unescape(encodeURIComponent(json)));
+  return b64url.enc(JSON.stringify({ m:enc("main"), r:enc("roof") }));
 }
 function applyEncoded(str){
-  const o = JSON.parse(decodeURIComponent(escape(atob(str))));
-  const dec = a => (a||[]).map(t=>{
-    const it={ type:t[0], x:t[1], y:t[2], rot:t[3], _id:uid++ };
-    if (t[4]) it.color=t[4]; return it;
-  });
-  state.layout = { main: dec(o.m), roof: dec(o.r) };
+  const o = JSON.parse(b64url.dec(str));
+  const dec = a => (a||[]).map(t => ({ type:t[0], x:t[1], y:t[2], rot:t[3], color:t[4] }));
+  state.layout = sanitizeLayout({ main: dec(o.m), roof: dec(o.r) });   // drops unknown types
 }
 function doShare(){
-  const url = location.origin + location.pathname + "#l=" + encodeLayout();
-  history.replaceState(null, "", url);
+  const code = encodeLayout();
+  // build the link for the clipboard only — do NOT replaceState (it would re-import
+  // this snapshot over the user's autosaved work on the next reload).
+  const url = location.origin + location.pathname + "#l=" + code;
+  if (code.length > 6000){ toast("Layout too big for a link — use Export instead"); return; }
   if (navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(url).then(
       ()=> toast("Link copied — paste to share your layout"),
@@ -1127,11 +1207,7 @@ function wire(){
 
   $("#btn-grid").addEventListener("click", e=>{ state.showGrid=!state.showGrid; e.currentTarget.classList.toggle("active",state.showGrid); render(); });
   $("#btn-dims").addEventListener("click", e=>{ state.showDims=!state.showDims; e.currentTarget.classList.toggle("active",state.showDims); render(); });
-  $("#btn-reset").addEventListener("click", ()=>{
-    if (confirm("Reset to the Feng Shui layout (command-position bed, books on the solid wall, dining for 6, roof office by the terrace door)?\n\nThis replaces your current arrangement on both floors.")){
-      loadPreset("suggested");
-    }
-  });
+  $("#btn-reset").addEventListener("click", ()=> loadPreset("suggested"));  // undoable via the toast
   $("#btn-export").addEventListener("click", exportLayout);
   $("#btn-import").addEventListener("click", ()=> $("#file-import").click());
   $("#file-import").addEventListener("change", e=>{ if(e.target.files[0]) importLayout(e.target.files[0]); e.target.value=""; });
@@ -1144,14 +1220,22 @@ function wire(){
 
   $("#btn-add").addEventListener("click", openCatalog);
   $("#catalog-close").addEventListener("click", closeCatalog);
+  $("#catalog-backdrop").addEventListener("click", closeCatalog);
+  wireSheetSwipe();
 
   $("#btn-suggestions").addEventListener("click", ()=>{ $("#suggest-body").innerHTML=suggestionsHTML(); $("#suggest-modal").hidden=false; });
   $("#suggest-close").addEventListener("click", ()=> $("#suggest-modal").hidden=true);
   $("#suggest-modal").addEventListener("click", e=>{ if(e.target.id==="suggest-modal") $("#suggest-modal").hidden=true; });
 
+  $("#btn-help").addEventListener("click", ()=> $("#help-modal").hidden=false);
+  $("#help-close").addEventListener("click", ()=> $("#help-modal").hidden=true);
+  $("#help-modal").addEventListener("click", e=>{ if(e.target.id==="help-modal") $("#help-modal").hidden=true; });
+
   // keyboard (desktop)
+  let nudgeT = 0;
   window.addEventListener("keydown", e=>{
     if (e.target.tagName==="INPUT") return;
+    if ((e.metaKey||e.ctrlKey) && (e.key==="z"||e.key==="Z")){ e.preventDefault(); undo(); return; }
     const it=state.selected;
     if (!it){ if(e.key==="g"){ $("#btn-grid").click(); } return; }
     if (e.key==="Delete"||e.key==="Backspace"){ e.preventDefault(); act("del"); }
@@ -1161,6 +1245,8 @@ function wire(){
     else if (e.key==="Escape"){ select(null); }
     else if (e.key.startsWith("Arrow")){
       e.preventDefault(); const step=e.shiftKey?6:1;
+      // snapshot once at the start of a run of nudges (debounced)
+      if (Date.now()-nudgeT > 600) pushUndo(); nudgeT = Date.now();
       if(e.key==="ArrowLeft") it.x-=step; if(e.key==="ArrowRight") it.x+=step;
       if(e.key==="ArrowUp") it.y-=step; if(e.key==="ArrowDown") it.y+=step;
       render(); save();
@@ -1179,6 +1265,8 @@ function init(){
     try { applyEncoded(location.hash.slice(3)); loaded = true; } catch(e){ /* fall through */ }
   }
   if (!loaded && !load()) state.layout = cloneDefault();
+  // last-resort guard: a corrupt layout must never leave a blank screen
+  if (!state.layout || !Array.isArray(state.layout.main)) state.layout = cloneDefault();
   buildCatalog();
   buildPresetsMenu();
   buildMoreMenu();
@@ -1186,7 +1274,7 @@ function init(){
   wire();
   $("#cat-floor-name").textContent = window.FLOORPLAN[state.floor].label;
   resize();
-  fitView();
+  try { fitView(); } catch(e){ state.layout = cloneDefault(); fitView(); }
   try {
     if (!localStorage.getItem("waverly-tips")){
       setTimeout(()=> toast("Tip: drag to move · double-tap to rotate · pinch to zoom"), 700);

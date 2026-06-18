@@ -7,8 +7,7 @@
   --panel:     #fbf7f1;
   --panel-2:   #f1ebe1;
   --ink:       #2c2722;
-  --ink-soft:  #6b6258;
-  --line:      #e3dac e;
+  --ink-soft:  #635a50;
   --line:      #e3dacb;
   --accent:    #c08457;   /* terracotta */
   --accent-2:  #6e8b7a;   /* sage */
@@ -29,6 +28,10 @@ body{
   -webkit-user-select:none; user-select:none;
 }
 button{ font-family:inherit; cursor:pointer; border:none; background:none; color:inherit; }
+:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
+@media (prefers-reduced-motion:reduce){
+  *{ animation-duration:.001ms !important; transition-duration:.001ms !important; }
+}
 
 /* ---------------- TOP BAR ---------------- */
 .topbar{
@@ -56,9 +59,9 @@ button{ font-family:inherit; cursor:pointer; border:none; background:none; color
 }
 .fs-btn.active{ background:var(--panel); color:var(--ink); box-shadow:var(--shadow); }
 
-.top-actions{ display:flex; gap:6px; }
+.top-actions{ display:flex; gap:6px; align-items:center; }
 .ghost{
-  width:38px; height:38px; border-radius:10px; font-size:15px;
+  width:40px; height:40px; border-radius:10px; font-size:15px;
   color:#e8ddcd; background:#ffffff14; display:grid; place-items:center; transition:.15s;
 }
 .ghost:hover{ background:#ffffff26; }
@@ -88,10 +91,12 @@ button{ font-family:inherit; cursor:pointer; border:none; background:none; color
 /* toast */
 .toast{
   position:fixed; z-index:80; left:50%; bottom:calc(26px + var(--safe-b)); transform:translateX(-50%);
-  background:#332d27; color:#f3ece2; padding:11px 18px; border-radius:12px; font-size:13px; font-weight:600;
+  display:flex; align-items:center; gap:14px; max-width:calc(100vw - 28px);
+  background:#332d27; color:#f3ece2; padding:11px 14px 11px 18px; border-radius:12px; font-size:13px; font-weight:600;
   box-shadow:var(--shadow); animation:toastin .2s ease;
 }
 @keyframes toastin{ from{ opacity:0; transform:translate(-50%,8px);} to{ opacity:1; transform:translate(-50%,0);} }
+.toast-btn{ background:var(--accent); color:#fff; font-weight:700; font-size:13px; padding:7px 12px; border-radius:9px; flex:0 0 auto; }
 
 /* ---------------- STAGE ---------------- */
 .stage{ position:relative; flex:1; overflow:hidden; background:
@@ -133,12 +138,12 @@ button{ font-family:inherit; cursor:pointer; border:none; background:none; color
 .sel-dims{ font-size:11px; color:var(--ink-soft); }
 .sel-tools{ display:flex; gap:4px; }
 .sel-tools button{
-  width:38px; height:38px; border-radius:10px; background:var(--panel-2); font-size:15px;
+  width:44px; height:44px; border-radius:11px; background:var(--panel-2); font-size:16px;
   display:grid; place-items:center; transition:.12s;
 }
 .sel-tools button:hover{ background:#e6ddcd; }
 .sel-tools button:active{ transform:scale(.92); }
-.sel-tools .danger{ background:#f3d9d2; color:var(--danger); }
+.sel-tools .danger{ background:#f3d9d2; color:var(--danger); margin-left:8px; }  /* separated to avoid misfires */
 
 /* color / finish swatches */
 .swatch-pop{
@@ -215,27 +220,42 @@ button{ font-family:inherit; cursor:pointer; border:none; background:none; color
 .modal-body strong{ color:var(--ink); }
 .tag{ display:inline-block; background:var(--panel-2); border-radius:6px; padding:1px 6px; font-size:11px; font-weight:600; color:var(--accent-2); }
 
+/* catalog backdrop (mobile bottom-sheet scrim) + grab handle */
+.catalog-backdrop{ position:fixed; inset:0; z-index:24; background:#1c181466; }
+.catalog-grab{ width:40px; height:5px; border-radius:3px; background:#d8cdbd; margin:8px auto 2px; }
+.catalog-grab{ display:none; }
+
 /* ---------------- RESPONSIVE ---------------- */
 @media (max-width:760px){
-  .topbar{ gap:8px; }
+  .topbar{ gap:7px; }
   .brand-text{ display:none; }                       /* icon only on phones */
   .floor-switch{ margin:0; }
-  .fs-btn{ padding:8px 16px; font-size:13px; }
-  .top-actions{ margin-left:auto; }
-  .top-actions > .ghost:not(#btn-more){ display:none; } /* collapse actions into ⋯ */
+  .fs-btn{ padding:8px 14px; font-size:13px; }
+  .top-actions{ margin-left:auto; gap:5px; }
+  /* keep the two highest-value actions visible; collapse the rest into ⋯ */
+  .top-actions > .ghost:not(#btn-more):not(#btn-presets):not(#btn-suggestions){ display:none; }
   #btn-more{ display:grid; }
+  #btn-presets{ padding:0 10px; font-size:12.5px; }
+  #btn-suggestions{ width:40px; padding:0; font-size:17px; }   /* icon-only on phones */
+  #btn-suggestions .lbl{ display:none; }
   .add-fab{ display:block; }
 
   .catalog{
     width:100%; height:72%; top:auto; bottom:0; border-left:none;
     border-top:1px solid var(--line); border-radius:20px 20px 0 0;
     transform:translateY(100%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
+    touch-action:none;
   }
   .catalog.open{ transform:translateY(0); }
+  .catalog-grab{ display:block; }
   .only-mobile{ display:grid; }
   .catalog-grid{ grid-template-columns:1fr 1fr 1fr; }
   .selbar{ bottom:calc(82px + var(--safe-b)); }       /* clear the add-fab */
+  .swatch-pop{ bottom:calc(138px + var(--safe-b)); }
 }
+@media (min-width:761px){ .catalog-backdrop{ display:none; } }  /* desktop: catalog is docked */
 @media (max-width:380px){
   .catalog-grid{ grid-template-columns:1fr 1fr; }
+  #btn-presets .lbl{ display:none; }                  /* icon-only Layouts on tiny screens */
+  #btn-presets{ width:40px; padding:0; }
 }

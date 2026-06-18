@@ -174,21 +174,24 @@ const C = {
   bedroom: [
     // Feng Shui "command position": headboard on the solid east wall, diagonal
     // from the SW door, door visible but not in its direct path.
-    p("rug_6x9",     458, 130),
+    p("rug_8x10",    455, 135),
     p("bed_queen",   467, 130, 90),
     p("nightstand",  498, 86,  90),
     p("nightstand",  498, 174, 90),
     p("dresser",     379, 116, 90),
   ],
   wic: [
-    p("wic_shelf",   368, 245, 90),
-    p("wic_shelf",   368, 300, 90),
+    p("wic_shelf",   352, 245, 90),     // double-hang on both long walls + center aisle
+    p("wic_shelf",   384, 245, 90),
+    p("wic_shelf",   352, 300, 90),
+    p("wic_shelf",   384, 300, 90),
+    p("wic_shelf",   137, 255),         // coat/linen closet by the entry
   ],
   dining: [
-    p("rug_5x8",     262, 258),
-    p("dining6",     262, 258),
-    p("dining_chair",234, 238, 180), p("dining_chair",262, 238, 180), p("dining_chair",290, 238, 180),
-    p("dining_chair",234, 278),      p("dining_chair",262, 278),      p("dining_chair",290, 278),
+    p("rug_5x8",     262, 268),
+    p("dining6",     262, 268),
+    p("dining_chair",234, 248, 180), p("dining_chair",262, 248, 180), p("dining_chair",290, 248, 180),
+    p("dining_chair",234, 288),      p("dining_chair",262, 288),      p("dining_chair",290, 288),
   ],
   stools: [
     p("bar_stool",   224, 318), p("bar_stool", 251, 318), p("bar_stool", 278, 318),
@@ -200,18 +203,19 @@ const C = {
   ],
   livingSectional: [
     // TV zone: wall-mounted TV (media console) on the east wall, L-sectional
-    // facing it with the coffee table in front; west side = a conversation nook
-    p("console_tv",  360, 125, 90),     // TV mounted on the east wall, above the door
+    // facing it with the coffee table 16" in front; west side = reading lounge
+    p("console_tv",  360, 130, 90),     // TV mounted on the east wall, above the door
     p("rug_8x10",    240, 162),
     p("sectional",   228, 160, 270),    // L faces east toward the TV
-    p("coffee_table",298, 152),
-    p("armchair",     72, 145,  90),    // conversation nook: two chairs across a table
-    p("armchair",    150, 145, -90),
-    p("side_table",  111, 145),
+    p("coffee_table",310, 160),         // ~16" seat-to-table gap, centred on the sofa
+    p("armchair",     78, 150,  75),    // reading lounge angled toward the book wall
+    p("armchair",    150, 158, -90),
+    p("side_table",  112, 150),
+    p("plant",        60, 200),         // fills the angled-wall pocket
     p("bookshelf",    72,  78),         // books on the solid NW wall
     p("bookshelf",   108,  78),
     p("bookshelf",   144,  78),
-    p("plant",       335, 200),
+    p("plant",       335, 205),
   ],
   livingTwoSofa: [
     p("rug_8x10",    235, 162),
@@ -268,10 +272,10 @@ const C = {
     p("dining_chair",210, 258, 90),  p("dining_chair",306, 258, -90),
   ],
   roof: [
-    // office on the deck right beside the terrace door (back to the bulkhead, facing the view)
-    p("desk",        320, 306),
-    p("office_chair",320, 282),
-    p("bookshelf",   366, 306),
+    // office command position: back to the bulkhead wall, FACING the open terrace/view
+    p("desk",        312, 280),
+    p("office_chair",312, 302),
+    p("bookshelf",   360, 306),
     // lounge conversation (NW)
     p("rug_round",   150, 150),
     p("dining_round",150, 150),
@@ -285,9 +289,10 @@ const C = {
     p("out_chair",   322, 150,  90), p("out_chair", 418, 150, -90),
     p("out_chair",   370, 104, 180), p("out_chair", 370, 196),
     // grill + greenery
-    p("grill",       110, 320),
+    p("grill",        95, 330),
     p("plant",        60, 250),
     p("planter",     420, 360),
+    p("planter",     150,  90),         // lounge backdrop / wood element
   ],
 };
 
