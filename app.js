@@ -103,6 +103,19 @@ function cloneDefault(){
 function save(){
   try { localStorage.setItem(STORE_KEY, JSON.stringify({ v:2, layout: state.layout })); }
   catch(e){ /* private mode / quota */ }
+  syncUrl();
+}
+// Once the user has shared (or opened a shared link) this session, keep the
+// address-bar URL in sync with their edits — so the page bookmark always saves
+// the CURRENT layout (and a reload restores it). Off by default => clean URLs.
+let liveUrl = false, _urlT = 0;
+function syncUrl(){
+  if (!liveUrl) return;
+  clearTimeout(_urlT);
+  _urlT = setTimeout(()=>{
+    try { const code = encodeLayout(); if (code.length <= 8000) history.replaceState(null, "", "#l="+code); }
+    catch(e){}
+  }, 500);
 }
 function load(){
   try {
@@ -1161,17 +1174,18 @@ function applyEncoded(str){
 }
 function doShare(){
   const code = encodeLayout();
-  // build the link for the clipboard only — do NOT replaceState (it would re-import
-  // this snapshot over the user's autosaved work on the next reload).
+  if (code.length > 8000){ toast("Layout too big for a link — use Export instead"); return; }
   const url = location.origin + location.pathname + "#l=" + code;
-  if (code.length > 6000){ toast("Layout too big for a link — use Export instead"); return; }
+  // turn on live-URL mode: the address bar now tracks your edits, so bookmarking
+  // this page (or reloading it) saves/restores the CURRENT layout. Safe because
+  // the hash stays in sync with localStorage — no stale-snapshot data loss.
+  liveUrl = true;
+  history.replaceState(null, "", "#l=" + code);
+  const ok = ()=> toast("Link copied — opens on any device. Bookmark this page to save it.");
   if (navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(url).then(
-      ()=> toast("Link copied — paste to share your layout"),
-      ()=> prompt("Copy your shareable layout link:", url)
-    );
+    navigator.clipboard.writeText(url).then(ok, ()=> prompt("Copy your layout link:", url));
   } else {
-    prompt("Copy your shareable layout link:", url);
+    prompt("Copy your layout link:", url);
   }
 }
 
@@ -1262,7 +1276,7 @@ function wire(){
 function init(){
   let loaded = false;
   if (location.hash.startsWith("#l=")){
-    try { applyEncoded(location.hash.slice(3)); loaded = true; } catch(e){ /* fall through */ }
+    try { applyEncoded(location.hash.slice(3)); loaded = true; liveUrl = true; } catch(e){ /* fall through */ }
   }
   if (!loaded && !load()) state.layout = cloneDefault();
   // last-resort guard: a corrupt layout must never leave a blank screen
