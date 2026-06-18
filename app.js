@@ -995,7 +995,7 @@ function makeThumb(c){
 function suggestionsHTML(){
   return `
   <h1>Making 500 Waverly feel like home</h1>
-  <p class="lede">A penthouse with great bones: oak floors, soaring ceilings with exposed beams, navy &amp; blush accent walls, a walnut kitchen with a waterfall island, wraparound corner glass, and ~780&nbsp;sf of outdoor across the balcony and roof terrace. Here's how I'd plan each zone for the two of you — lots of clothes, lots of books, and a love of hosting.</p>
+  <p class="lede">A penthouse with great bones: oak floors, soaring ceilings with exposed beams, navy &amp; blush accent walls, a walnut U-shaped kitchen with a waterfall peninsula, wraparound corner glass, and ~780&nbsp;sf of outdoor across the balcony and roof terrace. Here's how I'd plan each zone for the two of you — lots of clothes, lots of books, and a love of hosting.</p>
 
   <h2>🛋️ Living / Dining — the "epic" room</h2>
   <ul>
@@ -1009,8 +1009,8 @@ function suggestionsHTML(){
   <h2>🍽️ Dining for 6+</h2>
   <ul>
     <li>A <strong>72" rectangular table seats 6</strong> comfortably; a 96" (8-seat) fits if you pull it toward the kitchen — there's length to spare. An <strong>extendable</strong> table is the move: 60–72" day-to-day, opens to 96"+ for dinners.</li>
-    <li>Leave <strong>~36"</strong> of clearance behind chairs to walk. Place it near the kitchen island so serving is one step away; the island doubles as a buffet.</li>
-    <li>3 counter stools at the waterfall island gives casual seating for breakfast and overflow.</li>
+    <li>Leave <strong>~36"</strong> of clearance behind chairs to walk. Place it near the kitchen peninsula so serving is one step away; the peninsula doubles as a buffet.</li>
+    <li>The <strong>U-shaped kitchen</strong> peninsula has <em>no seating overhang</em>, but the base is deep on storage — use it for prep and as a serving counter rather than stools. For casual seating, the dining table is two steps away.</li>
   </ul>
 
   <h2>🛏️ Bedroom (11'8" × 11'0")</h2>
@@ -1031,8 +1031,9 @@ function suggestionsHTML(){
 
   <h2>🖥️ Roof landing — the office nook</h2>
   <ul>
-    <li>A <strong>48" desk + rolling chair</strong> at the top of the stairs, facing out toward the terrace and skyline, makes a great work-from-home spot. Keep it just off the stair bulkhead so it's sheltered.</li>
-    <li>Add a small <strong>weather-tolerant shelf</strong> and a power source. If it's exposed, choose materials that handle humidity (powder-coated metal, teak) and bring the chair in during storms.</li>
+    <li>Put the desk <strong>inside the enclosed stair-bulkhead landing</strong> (before the swing door to the terrace), not out on the open deck — it's <em>indoors</em>, so it's sheltered and climate-controlled year-round. Tuck a <strong>48" desk + rolling chair</strong> into the corner by the window, facing the water-tower view.</li>
+    <li>By my read the clear floor beside the stair is roughly <strong>48" wide</strong> — enough for a 48" desk against the wall with a rolling chair in front (a desk + chair wants about <strong>48" × 54"</strong> of footprint). It's snug but workable; <strong>verify the tile count</strong> (looks like 12" tiles) when you have the keys so we can lock the exact spot.</li>
+    <li>Since it's inside you can use normal furniture — no weatherproofing. Add a slim <strong>shelf</strong> down the side wall and a power source, and it's a real work-from-home nook.</li>
   </ul>
 
   <h2>🌇 Balcony &amp; roof terrace (outdoor furniture staying)</h2>
