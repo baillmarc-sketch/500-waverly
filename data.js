@@ -293,8 +293,8 @@ const oneBed = (living, dining=C.dining) =>
 
 window.PRESETS = {
   suggested: {
-    name: "Sectional",
-    desc: "Big L-sectional facing the TV wall — the cozy default.",
+    name: "Feng Shui · Sectional",
+    desc: "Recommended — command-position bed, L-sectional + TV wall, dining for 6.",
     main: oneBed(C.livingSectional), roof: [ ...C.roof ],
   },
   twoSofa: {
