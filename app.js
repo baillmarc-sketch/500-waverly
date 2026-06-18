@@ -1,0 +1,1037 @@
+/* ============================================================================
+   500 Waverly — Penthouse Planner  ·  app engine
+   Vanilla JS + Canvas. Unified pointer (mouse + touch). World units = inches.
+   ============================================================================ */
+(() => {
+"use strict";
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+/* ---------------- state ---------------- */
+const STORE_KEY = "waverly-ph4-layout-v1";
+const SNAP = 2;            // position snap, inches
+const ROT_SNAP = 15;      // rotation snap, degrees
+const WALL = 5;           // wall thickness, inches
+
+const state = {
+  floor: "main",
+  scale: 1,               // CSS px per inch
+  panX: 0, panY: 0,
+  showGrid: false,
+  showDims: true,
+  selected: null,         // item ref
+  guides: [],             // alignment guides shown while dragging
+  layout: { main: [], roof: [] },
+};
+
+function toast(msg){
+  const t = $("#toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(()=> t.hidden = true, 1900);
+}
+
+const canvas = $("#plan");
+const ctx = canvas.getContext("2d");
+let dpr = Math.max(1, window.devicePixelRatio || 1);
+let uid = 1;
+
+/* ---------------- units / format ---------------- */
+function ftin(inches){
+  let f = Math.floor(inches / 12);
+  let i = Math.round(inches - f * 12);
+  if (i === 12){ f++; i = 0; }
+  return i ? `${f}'${i}"` : `${f}'`;
+}
+
+/* ---------------- persistence ---------------- */
+function cloneDefault(){
+  const out = { main: [], roof: [] };
+  for (const fl of ["main","roof"])
+    out[fl] = (window.DEFAULT_LAYOUT[fl] || []).map(d => ({ ...d, _id: uid++ }));
+  return out;
+}
+function save(){
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ v:1, layout: state.layout })); }
+  catch(e){ /* private mode etc. */ }
+}
+function load(){
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data || !data.layout) return false;
+    for (const fl of ["main","roof"])
+      (data.layout[fl] || []).forEach(it => it._id = uid++);
+    state.layout = { main: data.layout.main || [], roof: data.layout.roof || [] };
+    return true;
+  } catch(e){ return false; }
+}
+
+/* ---------------- geometry helpers ---------------- */
+function items(){ return state.layout[state.floor]; }
+function plan(){ return window.FLOORPLAN[state.floor]; }
+function cat(t){ return window.CATALOG[t]; }
+
+function planBounds(){
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  for (const a of plan().areas)
+    for (const [x,y] of a.poly){ minX=Math.min(minX,x); minY=Math.min(minY,y); maxX=Math.max(maxX,x); maxY=Math.max(maxY,y); }
+  return { minX, minY, maxX, maxY, w:maxX-minX, h:maxY-minY };
+}
+
+function toWorld(cssX, cssY){ return { x:(cssX-state.panX)/state.scale, y:(cssY-state.panY)/state.scale }; }
+
+/* point inside rotated rect (item) */
+function hitItem(wx, wy, it){
+  const c = cat(it.type); if (!c) return false;
+  const a = -it.rot * Math.PI/180;
+  const dx = wx - it.x, dy = wy - it.y;
+  const lx =  dx*Math.cos(a) - dy*Math.sin(a);
+  const ly =  dx*Math.sin(a) + dy*Math.cos(a);
+  const pad = 2;
+  return Math.abs(lx) <= c.w/2+pad && Math.abs(ly) <= c.h/2+pad;
+}
+function topItemAt(wx, wy){
+  const arr = items();
+  for (let i=arr.length-1; i>=0; i--) if (hitItem(wx,wy,arr[i])) return arr[i];
+  return null;
+}
+
+/* axis-aligned bbox of rotated item (for overlap hint) */
+function bbox(it){
+  const c = cat(it.type);
+  const a = it.rot*Math.PI/180, ca=Math.abs(Math.cos(a)), sa=Math.abs(Math.sin(a));
+  const w = c.w*ca + c.h*sa, h = c.w*sa + c.h*ca;
+  return { x0:it.x-w/2, y0:it.y-h/2, x1:it.x+w/2, y1:it.y+h/2 };
+}
+function overlaps(it){
+  if (cat(it.type).solid === false) return false;
+  const b = bbox(it);
+  for (const o of items()){
+    if (o===it || cat(o.type).solid===false) continue;
+    const ob = bbox(o);
+    if (b.x0 < ob.x1-3 && b.x1 > ob.x0+3 && b.y0 < ob.y1-3 && b.y1 > ob.y0+3) return true;
+  }
+  return false;
+}
+
+/* rotated half-extents (for wall snapping) */
+function halfExtents(it){
+  const c = cat(it.type), a = it.rot*Math.PI/180, ca=Math.abs(Math.cos(a)), sa=Math.abs(Math.sin(a));
+  return { bw:(c.w*ca + c.h*sa)/2, bh:(c.w*sa + c.h*ca)/2 };
+}
+/* cached axis-aligned wall lines for the current floor (for snap-to-wall) */
+let _wallCache = { floor:null, vx:[], hy:[] };
+function wallLines(){
+  if (_wallCache.floor === state.floor) return _wallCache;
+  const vx=new Set(), hy=new Set();
+  for (const w of (plan().walls||[])){
+    if (w[0]===w[2]) vx.add(w[0]);
+    if (w[1]===w[3]) hy.add(w[1]);
+  }
+  for (const a of plan().areas){
+    const P=a.poly;
+    for (let i=0;i<P.length;i++){
+      const A=P[i], B=P[(i+1)%P.length];
+      if (A[0]===B[0]) vx.add(A[0]);
+      if (A[1]===B[1]) hy.add(A[1]);
+    }
+  }
+  _wallCache = { floor:state.floor, vx:[...vx], hy:[...hy] };
+  return _wallCache;
+}
+
+/* ---------------- view ---------------- */
+function resize(){
+  dpr = Math.max(1, window.devicePixelRatio || 1);
+  const r = canvas.getBoundingClientRect();
+  canvas.width  = Math.round(r.width  * dpr);
+  canvas.height = Math.round(r.height * dpr);
+  render();
+}
+function fitView(){
+  const r = canvas.getBoundingClientRect();
+  const b = planBounds();
+  const pad = 70;
+  const sidebar = (window.innerWidth > 760) ? 300 : 0;        // catalog occupies right on desktop
+  const availW = r.width - sidebar - pad*2;
+  const availH = r.height - pad*2 - 40;
+  state.scale = Math.min(availW / b.w, availH / b.h);
+  state.panX = pad + (availW - b.w*state.scale)/2 - b.minX*state.scale;
+  state.panY = pad + (availH - b.h*state.scale)/2 - b.minY*state.scale + 6;
+  render();
+}
+function zoomAt(cssX, cssY, factor){
+  const w = toWorld(cssX, cssY);
+  state.scale = Math.max(0.2, Math.min(12, state.scale*factor));
+  state.panX = cssX - w.x*state.scale;
+  state.panY = cssY - w.y*state.scale;
+  render();
+}
+
+/* ======================================================================
+   RENDER
+   ====================================================================== */
+function render(){
+  const r = canvas.getBoundingClientRect();
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,r.width,r.height);
+  ctx.save();
+  ctx.translate(state.panX, state.panY);
+  ctx.scale(state.scale, state.scale);
+
+  const pl = plan();
+
+  // soft drop shadow under the floor plate
+  ctx.save();
+  ctx.shadowColor = "rgba(60,45,30,.28)";
+  ctx.shadowBlur = 26/state.scale*8;
+  ctx.shadowOffsetY = 8;
+  for (const a of pl.areas){ pathPoly(a.poly); ctx.fillStyle = "#000"; ctx.fill(); }
+  ctx.restore();
+
+  // area fills
+  for (const a of pl.areas){
+    pathPoly(a.poly);
+    ctx.fillStyle = a.kind === "outdoor" ? "#e7eadf" : "#f3e7d2"; // oak indoors, paver outdoors
+    ctx.fill();
+    if (a.kind === "outdoor") drawPaverGrid(a.poly);
+    else drawWoodGrain(a.poly);
+  }
+
+  if (state.showGrid) drawGrid();
+
+  // perimeter: walls (indoor) / rail (outdoor)
+  for (const a of pl.areas){
+    pathPoly(a.poly, true);
+    if (a.kind === "outdoor"){
+      ctx.lineWidth = 7; ctx.strokeStyle = "#b9b09c"; ctx.stroke();
+      ctx.lineWidth = 2.5; ctx.strokeStyle = "#8d8674"; ctx.stroke();
+    } else {
+      ctx.lineWidth = WALL; ctx.lineJoin="round"; ctx.strokeStyle = "#39322b"; ctx.stroke();
+    }
+  }
+
+  // interior walls
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.lineWidth = WALL; ctx.strokeStyle = "#39322b";
+  for (const w of (pl.walls||[])){ ctx.beginPath(); ctx.moveTo(w[0],w[1]); ctx.lineTo(w[2],w[3]); ctx.stroke(); }
+
+  // windows over walls
+  for (const w of (pl.windows||[])){
+    ctx.lineWidth = WALL+2.5; ctx.strokeStyle = "#f3e7d2"; ctx.beginPath(); ctx.moveTo(w[0],w[1]); ctx.lineTo(w[2],w[3]); ctx.stroke();
+    ctx.lineWidth = 2; ctx.strokeStyle = "#7fa6c4"; ctx.beginPath(); ctx.moveTo(w[0],w[1]); ctx.lineTo(w[2],w[3]); ctx.stroke();
+  }
+
+  // doors
+  for (const d of (pl.doors||[])) drawDoor(d);
+
+  // fixtures
+  for (const f of (pl.fixtures||[])) drawFixture(f);
+
+  // furniture — rugs/decor first (solid:false), then solids
+  const arr = items();
+  const order = [...arr].sort((a,b)=>(cat(a.type).solid===false?0:1)-(cat(b.type).solid===false?0:1));
+  for (const it of order) drawPiece(it);
+
+  // labels (upright, scaled with plan)
+  for (const a of pl.areas) if (a.label) drawAreaLabel(a);
+  for (const l of (pl.labels||[])) drawLabel(l);
+
+  // alignment guides (while dragging)
+  if (state.guides.length) drawGuides();
+
+  // selection
+  if (state.selected && arr.includes(state.selected)) drawSelection(state.selected);
+
+  ctx.restore();
+  drawCompass();
+  drawRotBadge();
+  updateHud();
+}
+
+/* angle readout shown while rotating */
+function drawRotBadge(){
+  if (mode !== "rotate" || !state.selected) return;
+  const it = state.selected;
+  const hw = handleWorld(it);
+  const sx = state.panX + hw.x*state.scale, sy = state.panY + hw.y*state.scale;
+  const txt = `${Math.round(((it.rot%360)+360)%360)}°`;
+  ctx.save();
+  ctx.font = "700 12px Inter, sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  const w = ctx.measureText(txt).width + 16;
+  ctx.fillStyle = "#332d27";
+  rr(sx - w/2, sy - 26, w, 20, 6); ctx.fill();
+  ctx.fillStyle = "#f3ece2"; ctx.fillText(txt, sx, sy - 16);
+  ctx.restore();
+}
+
+function drawGuides(){
+  const b = planBounds();
+  ctx.save();
+  ctx.strokeStyle = "#d4567e"; ctx.lineWidth = 1; ctx.setLineDash([5,4]);
+  for (const g of state.guides){
+    ctx.beginPath();
+    if (g.type==="v"){ ctx.moveTo(g.at, b.minY-30); ctx.lineTo(g.at, b.maxY+30); }
+    else { ctx.moveTo(b.minX-30, g.at); ctx.lineTo(b.maxX+30, g.at); }
+    ctx.stroke();
+  }
+  ctx.setLineDash([]); ctx.restore();
+}
+
+/* north compass, drawn in screen space */
+function drawCompass(){
+  const r = canvas.getBoundingClientRect();
+  const cx = r.width - 34, cy = 34, R = 17;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.fillStyle = "rgba(255,255,255,.78)"; ctx.beginPath(); ctx.arc(0,0,R,0,7); ctx.fill();
+  ctx.strokeStyle = "#b9ac98"; ctx.lineWidth = 1; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,-R+4); ctx.lineTo(4,1); ctx.lineTo(0,-2); ctx.lineTo(-4,1); ctx.closePath();
+  ctx.fillStyle = "#c08457"; ctx.fill();
+  ctx.fillStyle = "#5a5046"; ctx.font = "700 9px Inter, sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillText("N", 0, R-5);
+  ctx.restore();
+}
+
+function pathPoly(poly, openOk){
+  ctx.beginPath();
+  poly.forEach((pt,i)=> i? ctx.lineTo(pt[0],pt[1]) : ctx.moveTo(pt[0],pt[1]));
+  ctx.closePath();
+}
+function drawPaverGrid(poly){
+  ctx.save(); pathPoly(poly); ctx.clip();
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  for (const [x,y] of poly){ minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y); }
+  ctx.strokeStyle="#d3d8c6"; ctx.lineWidth=1;
+  for (let x=Math.ceil(minX/24)*24; x<=maxX; x+=24){ ctx.beginPath(); ctx.moveTo(x,minY); ctx.lineTo(x,maxY); ctx.stroke(); }
+  for (let y=Math.ceil(minY/24)*24; y<=maxY; y+=24){ ctx.beginPath(); ctx.moveTo(minX,y); ctx.lineTo(maxX,y); ctx.stroke(); }
+  ctx.restore();
+}
+function drawWoodGrain(poly){
+  ctx.save(); pathPoly(poly); ctx.clip();
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  for (const [x,y] of poly){ minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y); }
+  ctx.strokeStyle = "rgba(150,118,78,.10)"; ctx.lineWidth = 0.8;
+  for (let y=Math.ceil(minY/7)*7; y<=maxY; y+=7){ ctx.beginPath(); ctx.moveTo(minX,y); ctx.lineTo(maxX,y); ctx.stroke(); }
+  ctx.restore();
+}
+function drawGrid(){
+  const b = planBounds();
+  ctx.save(); ctx.strokeStyle = "rgba(120,100,70,.16)"; ctx.lineWidth = 0.7;
+  for (let x=Math.floor(b.minX/12)*12; x<=b.maxX; x+=12){ ctx.beginPath(); ctx.moveTo(x,b.minY-20); ctx.lineTo(x,b.maxY+20); ctx.stroke(); }
+  for (let y=Math.floor(b.minY/12)*12; y<=b.maxY; y+=12){ ctx.beginPath(); ctx.moveTo(b.minX-20,y); ctx.lineTo(b.maxX+20,y); ctx.stroke(); }
+  ctx.restore();
+}
+
+/* ---- labels ---- */
+function drawAreaLabel(a){
+  ctx.save();
+  ctx.fillStyle = "#5a5046"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.font = "700 13px Inter, sans-serif";
+  ctx.fillText(a.label.toUpperCase(), a.lx, a.ly);
+  if (a.dim && state.showDims){
+    ctx.font = "600 10px Inter, sans-serif"; ctx.fillStyle="#8a7f70";
+    ctx.fillText(a.dim, a.lx, a.ly+15);
+  }
+  ctx.restore();
+}
+function drawLabel(l){
+  ctx.save();
+  ctx.fillStyle = "#6b6054"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.font = "700 10.5px Inter, sans-serif";
+  ctx.fillText(l.text.toUpperCase(), l.x, l.y);
+  if (l.sub && state.showDims){
+    ctx.font = "600 9px Inter, sans-serif"; ctx.fillStyle="#9a8f80";
+    ctx.fillText(l.sub, l.x, l.y+12);
+  }
+  ctx.restore();
+}
+
+/* ---- doors ---- */
+function drawDoor(d){
+  ctx.save();
+  ctx.strokeStyle = "#b9ac98"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(d.x, d.y, d.r, d.a0*Math.PI/180, d.a1*Math.PI/180); ctx.stroke();
+  ctx.restore();
+}
+
+/* ---- fixtures ---- */
+function drawFixture(f){
+  ctx.save();
+  ctx.lineJoin="round";
+  const stroke = "#7d7263";
+  switch(f.kind){
+    case "island": {
+      rr(f.x,f.y,f.w,f.h,5); ctx.fillStyle="#efe9df"; ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle=stroke; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(f.x+f.w*0.32, f.y+f.h/2, 7,5,0,0,7); ctx.strokeStyle="#9a8f80"; ctx.lineWidth=1.5; ctx.stroke();
+      break;
+    }
+    case "counter": case "vanity": {
+      rr(f.x,f.y,f.w,f.h,3); ctx.fillStyle="#e8e0d3"; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=stroke; ctx.stroke();
+      if (f.kind==="vanity"){ ctx.beginPath(); ctx.ellipse(f.x+f.w/2,f.y+f.h/2,8,5,0,0,7); ctx.strokeStyle="#9a8f80"; ctx.stroke(); }
+      break;
+    }
+    case "appliance": {
+      rr(f.x,f.y,f.w,f.h,2); ctx.fillStyle="#dfd8cb"; ctx.fill(); ctx.lineWidth=1; ctx.strokeStyle=stroke; ctx.stroke();
+      ctx.fillStyle="#8a7f70"; ctx.font="700 7px Inter"; ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillText(f.label||"", f.x+f.w/2, f.y+f.h/2);
+      break;
+    }
+    case "tub": {
+      rr(f.x,f.y,f.w,f.h,8); ctx.fillStyle="#eef1f2"; ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle=stroke; ctx.stroke();
+      rr(f.x+4,f.y+4,f.w-8,f.h-8,6); ctx.lineWidth=1; ctx.strokeStyle="#b9c2c4"; ctx.stroke();
+      break;
+    }
+    case "shower": {
+      rr(f.x,f.y,f.w,f.h,2); ctx.fillStyle="#eef1f2"; ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle=stroke; ctx.stroke();
+      ctx.strokeStyle="#c2cacb"; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(f.x,f.y); ctx.lineTo(f.x+f.w,f.y+f.h); ctx.moveTo(f.x+f.w,f.y); ctx.lineTo(f.x,f.y+f.h); ctx.stroke();
+      break;
+    }
+    case "toilet": {
+      ctx.fillStyle="#eef1f2"; ctx.strokeStyle=stroke; ctx.lineWidth=1.5;
+      rr(f.x-6,f.y-9,12,8,2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(f.x,f.y+3,7,9,0,0,7); ctx.fillStyle="#eef1f2"; ctx.fill(); ctx.stroke();
+      break;
+    }
+    case "wd": {
+      rr(f.x,f.y,f.w,f.h,3); ctx.fillStyle="#e9e3d8"; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=stroke; ctx.stroke();
+      ctx.beginPath(); ctx.arc(f.x+f.w/2,f.y+f.h/2,Math.min(f.w,f.h)/2-4,0,7); ctx.strokeStyle="#b3a999"; ctx.stroke();
+      break;
+    }
+    case "stairs": {
+      rr(f.x,f.y,f.w,f.h,2); ctx.fillStyle="#ece4d6"; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=stroke; ctx.stroke();
+      ctx.strokeStyle="#bdb09b"; ctx.lineWidth=1;
+      const steps=7;
+      for (let i=1;i<steps;i++){ const yy=f.y+(f.h/steps)*i; ctx.beginPath(); ctx.moveTo(f.x,yy); ctx.lineTo(f.x+f.w,yy); ctx.stroke(); }
+      ctx.fillStyle="#8a7f70"; ctx.font="700 9px Inter"; ctx.textAlign="center"; ctx.textBaseline="middle";
+      const ay = f.dir==="up"? f.y+10 : f.y+f.h-10;
+      ctx.fillText(f.dir==="up"?"↑":"↓", f.x+f.w/2, ay);
+      ctx.fillText(f.label||"", f.x+f.w/2, f.y+f.h/2);
+      break;
+    }
+    case "planters": {
+      rr(f.x,f.y,f.w,f.h,3); ctx.fillStyle="#7d5a3c"; ctx.fill();
+      ctx.fillStyle="#6b9a5a";
+      const horiz = f.w>=f.h, n = Math.max(2, Math.round((horiz?f.w:f.h)/22));
+      for (let i=0;i<n;i++){
+        const cx = horiz ? f.x + (f.w/n)*(i+0.5) : f.x+f.w/2;
+        const cy = horiz ? f.y+f.h/2 : f.y + (f.h/n)*(i+0.5);
+        ctx.beginPath(); ctx.arc(cx,cy,Math.min(f.w,f.h)/2-2,0,7); ctx.fill();
+      }
+      break;
+    }
+  }
+  ctx.restore();
+}
+
+/* ---- furniture ---- */
+function drawPiece(it){
+  const c = cat(it.type); if (!c) return;
+  const warn = overlaps(it);
+  ctx.save();
+  ctx.translate(it.x, it.y);
+  ctx.rotate(it.rot*Math.PI/180);
+  const w=c.w, h=c.h;
+  ctx.lineJoin="round";
+  if (c.solid !== false){                       // soft drop shadow for real furniture
+    const lifted = (it === state.selected && mode === "drag");
+    ctx.shadowColor = "rgba(50,38,24,.30)";
+    ctx.shadowBlur = lifted ? 16 : 6;
+    ctx.shadowOffsetY = lifted ? 9 : 3;
+  }
+  drawShape(ctx, c.render, w, h, c.fill, { warn });
+  ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  ctx.restore();
+
+  // upright label
+  if (c.solid !== false && Math.min(c.w,c.h)*state.scale > 26){
+    ctx.save();
+    ctx.fillStyle="rgba(35,30,25,.62)"; ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.font = "600 8px Inter, sans-serif";
+    const name = shortName(c.name);
+    ctx.fillText(name, it.x, it.y);
+    ctx.restore();
+  }
+}
+function shortName(n){
+  return n.replace(/\s*\(.*\)/,"").replace("Dining Table","Dining").replace("Media + TV","TV");
+}
+
+/* generic shape drawer — centered at 0,0, size w×h in current units */
+function drawShape(g, render, w, h, fill, opt={}){
+  const hw=w/2, hh=h/2;
+  const stroke = opt.warn ? "#c2553f" : "rgba(45,35,25,.55)";
+  const lw = opt.thumb ? 1.4 : 1.4;
+  g.lineWidth = lw;
+  g.strokeStyle = stroke;
+  g.fillStyle = fill;
+
+  const cushion = (x,y,cw,ch,r=4)=>{ rrG(g,x,y,cw,ch,r); g.fill(); g.stroke(); };
+
+  switch(render){
+    case "bed": {
+      rrG(g,-hw,-hh,w,h,6); g.fillStyle=fill; g.fill(); g.stroke();
+      // pillows at the "head" (top, -y)
+      g.fillStyle="#fbf6ec";
+      rrG(g,-hw+5,-hh+5, hw-8, 16, 3); g.fill(); g.stroke();
+      rrG(g,1,-hh+5, hw-8, 16, 3); g.fill(); g.stroke();
+      // duvet line
+      g.strokeStyle="rgba(45,35,25,.30)"; g.beginPath(); g.moveTo(-hw,-hh+30); g.lineTo(hw,-hh+30); g.stroke();
+      break;
+    }
+    case "sofa": {
+      rrG(g,-hw,-hh,w,h,7); g.fill(); g.stroke();              // body
+      g.fillStyle = shade(fill,-12);
+      rrG(g,-hw+3,-hh+3,w-6,12,4); g.fill();                   // backrest (top)
+      g.fillStyle = shade(fill,8);
+      cushion(-hw+5, -hh+16, w-10, h-22, 4);                  // seat
+      break;
+    }
+    case "sectional": {
+      // L-shape: main body (top) + return (left)
+      rrG(g,-hw,-hh,w,h*0.52,7); g.fill(); g.stroke();
+      rrG(g,-hw,-hh,w*0.42,h,7); g.fill(); g.stroke();
+      g.fillStyle=shade(fill,8);
+      rrG(g,-hw+5,-hh+13, w-10, h*0.52-18, 4); g.fill();
+      rrG(g,-hw+5,-hh+13, w*0.42-12, h-22, 4); g.fill();
+      break;
+    }
+    case "armchair": {
+      rrG(g,-hw,-hh,w,h,7); g.fill(); g.stroke();
+      g.fillStyle=shade(fill,-12); rrG(g,-hw+3,-hh+3,w-6,11,4); g.fill();
+      g.fillStyle=shade(fill,8);  rrG(g,-hw+5,-hh+15,w-10,h-20,4); g.fill();
+      break;
+    }
+    case "table": {
+      rrG(g,-hw,-hh,w,h,4); g.fillStyle=fill; g.fill(); g.stroke();
+      g.strokeStyle="rgba(255,255,255,.18)"; rrG(g,-hw+5,-hh+5,w-10,h-10,3); g.stroke();
+      break;
+    }
+    case "box": case "drawers": case "media": {
+      rrG(g,-hw,-hh,w,h,3); g.fill(); g.stroke();
+      if (render==="drawers"){
+        g.strokeStyle="rgba(255,255,255,.22)";
+        const n=Math.max(1,Math.round(w/20));
+        for(let i=1;i<n;i++){ const x=-hw+(w/n)*i; g.beginPath(); g.moveTo(x,-hh+3); g.lineTo(x,hh-3); g.stroke(); }
+      }
+      if (render==="media"){
+        // TV bar on the front (-y side)
+        g.fillStyle="#20262e"; rrG(g,-hw+4,-hh-3,w-8,4,1); g.fill();
+      }
+      break;
+    }
+    case "shelf": {
+      rrG(g,-hw,-hh,w,h,2); g.fill(); g.stroke();
+      g.strokeStyle="rgba(255,255,255,.25)";
+      const n=Math.max(2,Math.round(w/9));
+      for(let i=1;i<n;i++){ const x=-hw+(w/n)*i; g.beginPath(); g.moveTo(x,-hh+2); g.lineTo(x,hh-2); g.stroke(); }
+      break;
+    }
+    case "round": {
+      g.beginPath(); g.ellipse(0,0,hw,hh,0,0,7); g.fill(); g.stroke();
+      break;
+    }
+    case "chair": {
+      rrG(g,-hw,-hh+3,w,h-3,3); g.fill(); g.stroke();
+      g.fillStyle=shade(fill,-12); rrG(g,-hw,-hh,w,5,2); g.fill();   // back at top
+      break;
+    }
+    case "plant": {
+      g.fillStyle="#9a8666"; g.beginPath(); g.ellipse(0,0,hw*0.6,hh*0.6,0,0,7); g.fill();
+      g.fillStyle=fill; for(let i=0;i<5;i++){ const an=i/5*7; g.beginPath(); g.ellipse(Math.cos(an)*hw*0.4,Math.sin(an)*hh*0.4,hw*0.45,hh*0.45,0,0,7); g.fill(); }
+      break;
+    }
+    case "rug": {
+      g.setLineDash([6,4]); g.lineWidth=1.4; g.strokeStyle="rgba(120,100,70,.6)";
+      rrG(g,-hw,-hh,w,h,3); g.fillStyle=fill; g.globalAlpha=0.55; g.fill(); g.globalAlpha=1; g.stroke();
+      g.setLineDash([]);
+      break;
+    }
+    case "ruground": {
+      g.setLineDash([6,4]); g.lineWidth=1.4; g.strokeStyle="rgba(120,100,70,.6)";
+      g.beginPath(); g.ellipse(0,0,hw,hh,0,0,7); g.fillStyle=fill; g.globalAlpha=0.55; g.fill(); g.globalAlpha=1; g.stroke();
+      g.setLineDash([]);
+      break;
+    }
+    default: { rrG(g,-hw,-hh,w,h,3); g.fill(); g.stroke(); }
+  }
+}
+
+/* rounded-rect path on ctx (world) and on arbitrary ctx */
+function rr(x,y,w,h,r){ rrG(ctx,x,y,w,h,r); }
+function rrG(g,x,y,w,h,r){
+  r=Math.min(r,Math.abs(w)/2,Math.abs(h)/2);
+  g.beginPath();
+  g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r);
+  g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath();
+}
+function shade(hex, amt){
+  const n=parseInt(hex.slice(1),16);
+  let r=(n>>16)+amt, gr=((n>>8)&255)+amt, b=(n&255)+amt;
+  r=Math.max(0,Math.min(255,r)); gr=Math.max(0,Math.min(255,gr)); b=Math.max(0,Math.min(255,b));
+  return "#"+((1<<24)+(r<<16)+(gr<<8)+b).toString(16).slice(1);
+}
+
+/* ---- selection chrome ---- */
+function drawSelection(it){
+  const c = cat(it.type);
+  ctx.save();
+  ctx.translate(it.x,it.y); ctx.rotate(it.rot*Math.PI/180);
+  ctx.strokeStyle="#c08457"; ctx.lineWidth=2; ctx.setLineDash([5,4]);
+  rr(-c.w/2-3,-c.h/2-3,c.w+6,c.h+6,5); ctx.stroke();
+  ctx.setLineDash([]);
+  // rotate handle stem + knob (toward -y / front)
+  const off=c.h/2+22;
+  ctx.beginPath(); ctx.moveTo(0,-c.h/2); ctx.lineTo(0,-off); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0,-off,7,0,7); ctx.fillStyle="#c08457"; ctx.fill();
+  ctx.strokeStyle="#fff"; ctx.lineWidth=2; ctx.stroke();
+  ctx.restore();
+}
+/* rotate-handle position in world coords (toward the piece's -y / "front") */
+function handleWorld(it){
+  const c=cat(it.type); const off=c.h/2+22; const a=it.rot*Math.PI/180;
+  return { x: it.x + Math.sin(a)*off, y: it.y - Math.cos(a)*off };
+}
+
+/* ======================================================================
+   HUD
+   ====================================================================== */
+function updateHud(){
+  const bar = $("#scalebar .bar");
+  const px = 60 * state.scale;   // 5 ft = 60 in
+  bar.style.width = px + "px";
+
+  // selection bar
+  const sel = state.selected;
+  const selbar = $("#selbar");
+  if (sel && items().includes(sel)){
+    const c = cat(sel.type);
+    selbar.hidden = false;
+    $("#sel-name").textContent = c.name;
+    $("#sel-dims").textContent = `${ftin(c.w)} × ${ftin(c.h)}  ·  ${Math.round(((sel.rot%360)+360)%360)}°`;
+  } else {
+    selbar.hidden = true;
+  }
+
+  // area readout — count + approx footprint of furniture on this floor
+  const n = items().filter(it=>cat(it.type).solid!==false).length;
+  $("#area-readout").textContent = `${plan().label} · ${n} pieces`;
+}
+
+/* ======================================================================
+   POINTER / GESTURES
+   ====================================================================== */
+const pointers = new Map();
+let mode = null;            // 'drag' | 'rotate' | 'pan' | 'pinch'
+let dragDX=0, dragDY=0, panSX=0, panSY=0, moved=false, downOnEmpty=false;
+let pinch = null;
+let lastTapItem = null, lastTapTime = 0;
+
+function evPos(e){ const r=canvas.getBoundingClientRect(); return { x:e.clientX-r.left, y:e.clientY-r.top }; }
+
+canvas.addEventListener("pointerdown", e=>{
+  canvas.setPointerCapture(e.pointerId);
+  const pos = evPos(e); pointers.set(e.pointerId, pos);
+  moved = false;
+
+  if (pointers.size === 2){
+    const pts=[...pointers.values()];
+    pinch = {
+      d: dist(pts[0],pts[1]),
+      mid: mid(pts[0],pts[1]),
+      scale: state.scale, panX: state.panX, panY: state.panY,
+    };
+    mode = "pinch";
+    return;
+  }
+
+  const w = toWorld(pos.x,pos.y);
+  // rotate handle?
+  if (state.selected && items().includes(state.selected)){
+    const hp = handleWorld(state.selected);
+    if (Math.hypot((hp.x-w.x)*state.scale,(hp.y-w.y)*state.scale) < 16){ mode="rotate"; return; }
+  }
+  const hit = topItemAt(w.x,w.y);
+  if (hit){
+    const now = Date.now();
+    if (hit === lastTapItem && now - lastTapTime < 320){   // double-tap → rotate 90°
+      hit.rot = (hit.rot + 90) % 360; save(); lastTapTime = 0;
+    } else { lastTapItem = hit; lastTapTime = now; }
+    select(hit);
+    mode="drag"; dragDX=w.x-hit.x; dragDY=w.y-hit.y; downOnEmpty=false;
+  } else {
+    mode="pan"; panSX=pos.x; panSY=pos.y; downOnEmpty=true;
+  }
+});
+
+canvas.addEventListener("pointermove", e=>{
+  if (!pointers.has(e.pointerId)) return;
+  const pos = evPos(e); pointers.set(e.pointerId, pos);
+  moved = true;
+
+  if (mode==="pinch" && pointers.size>=2){
+    const pts=[...pointers.values()];
+    const d=dist(pts[0],pts[1]), m=mid(pts[0],pts[1]);
+    const f = d/pinch.d;
+    const ns = Math.max(0.2, Math.min(12, pinch.scale*f));
+    // keep midpoint world-stable using starting transform
+    const wx=(pinch.mid.x-pinch.panX)/pinch.scale, wy=(pinch.mid.y-pinch.panY)/pinch.scale;
+    state.scale=ns;
+    state.panX = m.x - wx*ns;
+    state.panY = m.y - wy*ns;
+    render(); return;
+  }
+
+  const w = toWorld(pos.x,pos.y);
+  if (mode==="drag" && state.selected){
+    const sel = state.selected;
+    let nx = Math.round((w.x-dragDX)/SNAP)*SNAP;
+    let ny = Math.round((w.y-dragDY)/SNAP)*SNAP;
+    const g=[];
+    const { bw, bh } = halfExtents(sel);
+    const WL = wallLines();
+    // 1) snap flush to a wall (edges), else 2) align centers with other pieces
+    let snapX=false, snapY=false;
+    for (const vx of WL.vx){
+      if (Math.abs((nx-bw)-vx) <= 5){ nx=vx+bw; g.push({type:"v",at:vx}); snapX=true; break; }
+      if (Math.abs((nx+bw)-vx) <= 5){ nx=vx-bw; g.push({type:"v",at:vx}); snapX=true; break; }
+    }
+    for (const hy of WL.hy){
+      if (Math.abs((ny-bh)-hy) <= 5){ ny=hy+bh; g.push({type:"h",at:hy}); snapY=true; break; }
+      if (Math.abs((ny+bh)-hy) <= 5){ ny=hy-bh; g.push({type:"h",at:hy}); snapY=true; break; }
+    }
+    for (const o of items()){
+      if (o===sel || cat(o.type).solid===false) continue;
+      if (!snapX && Math.abs(o.x-nx) <= 4){ nx=o.x; g.push({type:"v",at:o.x}); snapX=true; }
+      if (!snapY && Math.abs(o.y-ny) <= 4){ ny=o.y; g.push({type:"h",at:o.y}); snapY=true; }
+    }
+    sel.x = nx; sel.y = ny; state.guides = g;
+    render();
+  } else if (mode==="rotate" && state.selected){
+    let ang = Math.atan2(w.y-state.selected.y, w.x-state.selected.x)*180/Math.PI + 90;
+    ang = Math.round(ang/ROT_SNAP)*ROT_SNAP;
+    state.selected.rot = ((ang%360)+360)%360;
+    render(); updateHud();
+  } else if (mode==="pan"){
+    state.panX += pos.x-panSX; state.panY += pos.y-panSY;
+    panSX=pos.x; panSY=pos.y; render();
+  }
+});
+
+function endPointer(e){
+  pointers.delete(e.pointerId);
+  if (state.guides.length){ state.guides=[]; render(); }
+  if (mode==="drag" || mode==="rotate") save();
+  if (mode==="pan" && downOnEmpty && !moved){ select(null); }
+  if (pointers.size===0){ mode=null; pinch=null; downOnEmpty=false; }
+  else if (pointers.size===1){ // lift from pinch → resume pan
+    const only=[...pointers.values()][0]; mode="pan"; panSX=only.x; panSY=only.y; downOnEmpty=false;
+  }
+}
+canvas.addEventListener("pointerup", endPointer);
+canvas.addEventListener("pointercancel", endPointer);
+
+canvas.addEventListener("wheel", e=>{
+  e.preventDefault();
+  const pos=evPos(e);
+  zoomAt(pos.x,pos.y, e.deltaY<0 ? 1.12 : 1/1.12);
+}, { passive:false });
+
+function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+function mid(a,b){ return { x:(a.x+b.x)/2, y:(a.y+b.y)/2 }; }
+
+/* ======================================================================
+   SELECTION + ACTIONS
+   ====================================================================== */
+function select(it){ state.selected = it; render(); }
+
+function addPiece(type){
+  const r = canvas.getBoundingClientRect();
+  const sidebar = (window.innerWidth>760)? 300:0;
+  const center = toWorld((r.width-sidebar)/2, r.height/2);
+  const it = { type, x:Math.round(center.x/SNAP)*SNAP, y:Math.round(center.y/SNAP)*SNAP, rot:0, _id:uid++ };
+  items().push(it);
+  select(it); save();
+  if (window.innerWidth<=760) closeCatalog();
+}
+
+function act(a){
+  const it=state.selected; if(!it) return;
+  if (a==="rot-l") it.rot=(((it.rot-15)%360)+360)%360;
+  if (a==="rot-r") it.rot=(it.rot+15)%360;
+  if (a==="rot-90") it.rot=(it.rot+90)%360;
+  if (a==="dup"){ const n={...it,x:it.x+12,y:it.y+12,_id:uid++}; items().push(n); state.selected=n; }
+  if (a==="front"){ const arr=items(); const i=arr.indexOf(it); if(i>=0){ arr.splice(i,1); arr.push(it); } }
+  if (a==="del"){ const arr=items(); const i=arr.indexOf(it); if(i>=0) arr.splice(i,1); state.selected=null; }
+  render(); save();
+}
+
+/* ======================================================================
+   CATALOG UI
+   ====================================================================== */
+function buildCatalog(){
+  const cats=[...new Set(Object.values(window.CATALOG).map(c=>c.cat))];
+  const tabsEl=$("#catalog-tabs"); tabsEl.innerHTML="";
+  let active=cats[0];
+  const grid=$("#catalog-grid");
+
+  function renderGrid(){
+    grid.innerHTML="";
+    for (const [key,c] of Object.entries(window.CATALOG)){
+      if (c.cat!==active) continue;
+      const el=document.createElement("button");
+      el.className="cat-item";
+      const cnv=makeThumb(c);
+      el.appendChild(cnv);
+      const nm=document.createElement("div"); nm.className="cat-name"; nm.textContent=c.name; el.appendChild(nm);
+      const sz=document.createElement("div"); sz.className="cat-size"; sz.textContent=`${ftin(c.w)} × ${ftin(c.h)}`; el.appendChild(sz);
+      el.addEventListener("click",()=>addPiece(key));
+      grid.appendChild(el);
+    }
+  }
+  cats.forEach(cn=>{
+    const t=document.createElement("button"); t.className="cat-tab"+(cn===active?" active":""); t.textContent=cn;
+    t.addEventListener("click",()=>{ active=cn; $$(".cat-tab",tabsEl).forEach(x=>x.classList.toggle("active",x===t)); renderGrid(); });
+    tabsEl.appendChild(t);
+  });
+  renderGrid();
+}
+function makeThumb(c){
+  const W=74,H=46,pad=8;
+  const cnv=document.createElement("canvas");
+  cnv.width=W*2; cnv.height=H*2; cnv.style.width=W+"px"; cnv.style.height=H+"px"; cnv.className="cat-thumb";
+  const g=cnv.getContext("2d"); g.scale(2,2);
+  const s=Math.min((W-pad*2)/c.w,(H-pad*2)/c.h);
+  g.translate(W/2,H/2); g.scale(s,s);
+  drawShape(g, c.render, c.w, c.h, c.fill, { thumb:true });
+  return cnv;
+}
+
+/* ======================================================================
+   SUGGESTIONS
+   ====================================================================== */
+function suggestionsHTML(){
+  return `
+  <h1>Making 500 Waverly feel like home</h1>
+  <p class="lede">A penthouse with great bones: oak floors, soaring ceilings with exposed beams, navy &amp; blush accent walls, a walnut kitchen with a waterfall island, wraparound corner glass, and ~780&nbsp;sf of outdoor across the balcony and roof terrace. Here's how I'd plan each zone for the two of you — lots of clothes, lots of books, and a love of hosting.</p>
+
+  <h2>🛋️ Living / Dining — the "epic" room</h2>
+  <ul>
+    <li><strong>Anchor with a sectional</strong> floating off the walls so the navy/blush walls stay visible. A ~9–10&nbsp;ft sectional (the seed layout uses a 112"×84" L) seats 5–6 and faces a media console — keep the chaise toward the window for the views without blocking the balcony doors.</li>
+    <li><strong>Two-piece alternative:</strong> a 84" sofa + a loveseat or two swivel accent chairs reads more "grown-up living room" and is far easier to rearrange for parties. Try both in the planner.</li>
+    <li><strong>Define zones with rugs.</strong> An 8×10 under the seating and a 5×8 under the dining table visually splits the long room into "living" and "dining" without walls.</li>
+    <li><strong>TV:</strong> a low 64–72" media console on the wall opposite the windows avoids glare. Mounting on the blush wall keeps cords hidden and the sightline clean from the sofa.</li>
+    <li><strong>Books:</strong> you have a lot — run a wall of shelving. Built-ins or modular (String, IKEA Billy/ BESTÅ, or Floyd) along the long interior wall turns the book collection into the room's main "art." Budget ~12" depth; the planner's bookshelves are 36"×12" so you can lay out a full wall.</li>
+  </ul>
+
+  <h2>🍽️ Dining for 6+</h2>
+  <ul>
+    <li>A <strong>72" rectangular table seats 6</strong> comfortably; a 96" (8-seat) fits if you pull it toward the kitchen — there's length to spare. An <strong>extendable</strong> table is the move: 60–72" day-to-day, opens to 96"+ for dinners.</li>
+    <li>Leave <strong>~36"</strong> of clearance behind chairs to walk. Place it near the kitchen island so serving is one step away; the island doubles as a buffet.</li>
+    <li>3 counter stools at the waterfall island gives casual seating for breakfast and overflow.</li>
+  </ul>
+
+  <h2>🛏️ Bedroom (11'8" × 11'0")</h2>
+  <ul>
+    <li><strong>Queen is the right call</strong> here — a king (76" wide) would crowd an 11' wall once you add nightstands. Queen (60") leaves comfortable ~24" walkways on both sides.</li>
+    <li>Float the headboard on the solid wall (away from the corner windows) so you keep the light and views. Two slim nightstands flank it; the <strong>dresser</strong> goes on the opposite wall or angled in a corner.</li>
+    <li>Those corner windows are the feature — keep furniture low around them. Consider a bench at the foot instead of a tall piece.</li>
+  </ul>
+
+  <h2>👗 Walk-in closet — built-in ideas</h2>
+  <p>You both have a lot of clothes, and the WIC is the place to solve it. Options, cheapest → nicest:</p>
+  <ul>
+    <li><strong>IKEA BOAXEL / ELVARLI</strong> — wall-mounted adjustable rails, double-hang one side for shirts, long-hang the other for coats/dresses. Cheap, flexible, renter-friendly.</li>
+    <li><strong>The Container Store Elfa</strong> — sturdier, looks semi-custom, great drawer inserts for folded items and accessories.</li>
+    <li><strong>Custom (California Closets / local)</strong> — if you're staying a while: floor-to-ceiling, a center island with drawers (the planner has a "Closet Island"), and good lighting. Maximize <em>double-hang</em> zones — two of you means hanging length is the scarce resource.</li>
+    <li>Rule of thumb: ~50% double-hang, 20% long-hang, 20% drawers/shelves, 10% shoes. Add a mirror and a single sconce or LED strip.</li>
+  </ul>
+
+  <h2>🖥️ Roof landing — the office nook</h2>
+  <ul>
+    <li>A <strong>48" desk + rolling chair</strong> at the top of the stairs, facing out toward the terrace and skyline, makes a great work-from-home spot. Keep it just off the stair bulkhead so it's sheltered.</li>
+    <li>Add a small <strong>weather-tolerant shelf</strong> and a power source. If it's exposed, choose materials that handle humidity (powder-coated metal, teak) and bring the chair in during storms.</li>
+  </ul>
+
+  <h2>🌇 Balcony &amp; roof terrace (outdoor furniture staying)</h2>
+  <ul>
+    <li><strong>Balcony (24'8"×5'0"):</strong> it's narrow — a bistro/round café table for 2 + a couple of chairs is the right scale (matches what's there now). Don't over-furnish; it's the morning-coffee perch.</li>
+    <li><strong>Terrace (33'6"×25'3"):</strong> zone it — a <em>lounge</em> cluster (sofa/loungers + low table) for sun, a <em>dining</em> set for 6 under shade, and a <em>grill</em> station near the stairs for easy in/out. The wood planters you have soften the concrete and give privacy.</li>
+    <li>Suggestions to add later: a market umbrella or cantilever shade, outdoor rug to warm the pavers, string lights along the parapet, and a few large planters with hardy grasses/evergreens for year-round green.</li>
+  </ul>
+
+  <h2>✨ Other ideas</h2>
+  <ul>
+    <li><strong>Keep the convertible option in mind:</strong> the living room can revert to a 2nd bedroom. If you ever want a guest room/nursery/office-with-a-door, the seed layout's "living zone" is exactly where that wall would go.</li>
+    <li><strong>Lighting:</strong> the ceilings are tall — a statement pendant over the dining table and floor lamps in the living corners will make it feel finished and warm at night.</li>
+    <li><strong>Entry moment:</strong> a slim console + mirror + tray by the angled entry wall gives you a drop zone for keys/mail.</li>
+    <li><strong>Storage:</strong> use the under-stair closet for luggage/seasonal; the W/D closet shelving for household goods. Vertical everywhere — these ceilings are your friend.</li>
+  </ul>
+
+  <p class="lede" style="margin-top:18px">Everything in the planner is to scale and draggable. Try the sectional vs. two-sofa options, slide the dining table along the room, and see what leaves the best flow to the balcony doors. Your layout auto-saves on this device.</p>
+  `;
+}
+
+/* ======================================================================
+   WIRING
+   ====================================================================== */
+function switchFloor(fl){
+  state.floor=fl; state.selected=null;
+  $$(".fs-btn").forEach(b=>b.classList.toggle("active", b.dataset.floor===fl));
+  $("#cat-floor-name").textContent = window.FLOORPLAN[fl].label;
+  fitView();
+}
+function openCatalog(){ $("#catalog").classList.add("open"); }
+function closeCatalog(){ $("#catalog").classList.remove("open"); }
+
+function exportLayout(){
+  const blob=new Blob([JSON.stringify({ v:1, layout:state.layout }, null, 2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download="500-waverly-layout.json"; a.click();
+  URL.revokeObjectURL(url);
+}
+function importLayout(file){
+  const fr=new FileReader();
+  fr.onload=()=>{ try{
+    const d=JSON.parse(fr.result);
+    if(!d.layout) throw 0;
+    for(const fl of ["main","roof"]) (d.layout[fl]||[]).forEach(it=>it._id=uid++);
+    state.layout={ main:d.layout.main||[], roof:d.layout.roof||[] };
+    state.selected=null; save(); render();
+  }catch(e){ alert("Could not read that layout file."); } };
+  fr.readAsText(file);
+}
+
+/* ---- presets ---- */
+function buildPresetsMenu(){
+  const menu = $("#presets-menu");
+  menu.innerHTML = `<div class="menu-head">Starter layouts</div>`;
+  for (const id of window.PRESET_ORDER){
+    const pr = window.PRESETS[id];
+    const b = document.createElement("button");
+    b.className = "menu-item";
+    b.innerHTML = `<strong>${pr.name}</strong><small>${pr.desc}</small>`;
+    b.addEventListener("click", ()=>{
+      if (confirm(`Load the "${pr.name}" starter layout? This replaces your current arrangement on both floors.`)){
+        loadPreset(id);
+      }
+      menu.hidden = true;
+    });
+    menu.appendChild(b);
+  }
+}
+function loadPreset(id){
+  const pr = window.PRESETS[id];
+  state.layout = {
+    main: pr.main.map(d=>({ ...d, _id:uid++ })),
+    roof: pr.roof.map(d=>({ ...d, _id:uid++ })),
+  };
+  state.selected = null; save(); render();
+  toast(`Loaded "${pr.name}" layout`);
+}
+
+/* ---- shareable link (layout encoded in URL hash) ---- */
+function encodeLayout(){
+  const enc = fl => state.layout[fl].map(it=>[it.type, it.x, it.y, it.rot]);
+  const json = JSON.stringify({ m:enc("main"), r:enc("roof") });
+  return btoa(unescape(encodeURIComponent(json)));
+}
+function applyEncoded(str){
+  const o = JSON.parse(decodeURIComponent(escape(atob(str))));
+  const dec = a => (a||[]).map(t=>({ type:t[0], x:t[1], y:t[2], rot:t[3], _id:uid++ }));
+  state.layout = { main: dec(o.m), roof: dec(o.r) };
+}
+function doShare(){
+  const url = location.origin + location.pathname + "#l=" + encodeLayout();
+  history.replaceState(null, "", url);
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(
+      ()=> toast("Link copied — paste to share your layout"),
+      ()=> prompt("Copy your shareable layout link:", url)
+    );
+  } else {
+    prompt("Copy your shareable layout link:", url);
+  }
+}
+
+function wire(){
+  $$(".fs-btn").forEach(b=> b.addEventListener("click",()=>switchFloor(b.dataset.floor)));
+
+  $("#btn-presets").addEventListener("click", e=>{
+    e.stopPropagation();
+    const m=$("#presets-menu"); m.hidden=!m.hidden;
+  });
+  $("#btn-share").addEventListener("click", doShare);
+  document.addEventListener("click", e=>{
+    const m=$("#presets-menu");
+    if (!m.hidden && !m.contains(e.target) && e.target.id!=="btn-presets") m.hidden=true;
+  });
+
+  $("#btn-grid").addEventListener("click", e=>{ state.showGrid=!state.showGrid; e.currentTarget.classList.toggle("active",state.showGrid); render(); });
+  $("#btn-dims").addEventListener("click", e=>{ state.showDims=!state.showDims; e.currentTarget.classList.toggle("active",state.showDims); render(); });
+  $("#btn-reset").addEventListener("click", ()=>{ if(confirm("Reset both floors to the suggested layout? Your current arrangement will be replaced.")){ state.layout=cloneDefault(); state.selected=null; save(); render(); } });
+  $("#btn-export").addEventListener("click", exportLayout);
+  $("#btn-import").addEventListener("click", ()=> $("#file-import").click());
+  $("#file-import").addEventListener("change", e=>{ if(e.target.files[0]) importLayout(e.target.files[0]); e.target.value=""; });
+
+  $("#zoom-in").addEventListener("click", ()=>{ const r=canvas.getBoundingClientRect(); zoomAt(r.width/2,r.height/2,1.2); });
+  $("#zoom-out").addEventListener("click", ()=>{ const r=canvas.getBoundingClientRect(); zoomAt(r.width/2,r.height/2,1/1.2); });
+  $("#zoom-fit").addEventListener("click", fitView);
+
+  $$("#selbar .sel-tools button").forEach(b=> b.addEventListener("click",()=>act(b.dataset.act)));
+
+  $("#btn-add").addEventListener("click", openCatalog);
+  $("#catalog-close").addEventListener("click", closeCatalog);
+
+  $("#btn-suggestions").addEventListener("click", ()=>{ $("#suggest-body").innerHTML=suggestionsHTML(); $("#suggest-modal").hidden=false; });
+  $("#suggest-close").addEventListener("click", ()=> $("#suggest-modal").hidden=true);
+  $("#suggest-modal").addEventListener("click", e=>{ if(e.target.id==="suggest-modal") $("#suggest-modal").hidden=true; });
+
+  // keyboard (desktop)
+  window.addEventListener("keydown", e=>{
+    if (e.target.tagName==="INPUT") return;
+    const it=state.selected;
+    if (!it){ if(e.key==="g"){ $("#btn-grid").click(); } return; }
+    if (e.key==="Delete"||e.key==="Backspace"){ e.preventDefault(); act("del"); }
+    else if (e.key==="r"||e.key==="]"){ act("rot-r"); }
+    else if (e.key==="["){ act("rot-l"); }
+    else if (e.key==="d"){ act("dup"); }
+    else if (e.key==="Escape"){ select(null); }
+    else if (e.key.startsWith("Arrow")){
+      e.preventDefault(); const step=e.shiftKey?6:1;
+      if(e.key==="ArrowLeft") it.x-=step; if(e.key==="ArrowRight") it.x+=step;
+      if(e.key==="ArrowUp") it.y-=step; if(e.key==="ArrowDown") it.y+=step;
+      render(); save();
+    }
+  });
+
+  window.addEventListener("resize", ()=>{ resize(); });
+}
+
+/* ======================================================================
+   BOOT
+   ====================================================================== */
+function init(){
+  let loaded = false;
+  if (location.hash.startsWith("#l=")){
+    try { applyEncoded(location.hash.slice(3)); loaded = true; } catch(e){ /* fall through */ }
+  }
+  if (!loaded && !load()) state.layout = cloneDefault();
+  buildCatalog();
+  buildPresetsMenu();
+  wire();
+  $("#cat-floor-name").textContent = window.FLOORPLAN[state.floor].label;
+  resize();
+  fitView();
+  try {
+    if (!localStorage.getItem("waverly-tips")){
+      setTimeout(()=> toast("Tip: drag to move · double-tap to rotate · pinch to zoom"), 700);
+      localStorage.setItem("waverly-tips","1");
+    }
+  } catch(e){}
+}
+init();
+
+})();

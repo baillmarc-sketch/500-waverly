@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#2b2622" />
+<title>500 Waverly · Penthouse Planner</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ===================== TOP BAR ===================== -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">◳</span>
+      <div class="brand-text">
+        <strong>500 Waverly</strong>
+        <small>Penthouse 4 · layout studio</small>
+      </div>
+    </div>
+
+    <div class="floor-switch" role="tablist" aria-label="Floor">
+      <button class="fs-btn active" data-floor="main" role="tab">Main Level</button>
+      <button class="fs-btn" data-floor="roof" role="tab">Roof Deck</button>
+    </div>
+
+    <div class="top-actions">
+      <button id="btn-presets" class="ghost wide" title="Starter layouts">⌂&nbsp;Layouts</button>
+      <button id="btn-suggestions" class="ghost wide" title="Decorator notes">💡&nbsp;Ideas</button>
+      <button id="btn-share" class="ghost wide" title="Copy a shareable link">🔗&nbsp;Share</button>
+      <button id="btn-grid"   class="ghost" title="Toggle grid">▦</button>
+      <button id="btn-dims"   class="ghost active" title="Toggle room dimensions">⌗ ft</button>
+      <button id="btn-reset"  class="ghost" title="Reset to suggested layout">⟲</button>
+      <button id="btn-export" class="ghost" title="Export layout">↥</button>
+      <button id="btn-import" class="ghost" title="Import layout">↧</button>
+      <input id="file-import" type="file" accept="application/json" hidden />
+    </div>
+  </header>
+
+  <!-- presets dropdown -->
+  <div id="presets-menu" class="menu" hidden></div>
+  <!-- transient toast -->
+  <div id="toast" class="toast" hidden></div>
+
+  <!-- ===================== STAGE ===================== -->
+  <main class="stage">
+    <canvas id="plan"></canvas>
+
+    <!-- floating zoom controls -->
+    <div class="zoom-controls">
+      <button id="zoom-in">＋</button>
+      <button id="zoom-out">－</button>
+      <button id="zoom-fit" title="Fit to screen">⤢</button>
+    </div>
+
+    <!-- scale + hint -->
+    <div class="stage-hud">
+      <div id="scalebar" class="scalebar"><span class="bar"></span><label>5 ft</label></div>
+      <div id="area-readout" class="area-readout"></div>
+    </div>
+
+    <!-- contextual selection bar -->
+    <div id="selbar" class="selbar" hidden>
+      <div class="sel-info">
+        <strong id="sel-name">Item</strong>
+        <span id="sel-dims" class="sel-dims"></span>
+      </div>
+      <div class="sel-tools">
+        <button data-act="rot-l"  title="Rotate left">⟲</button>
+        <button data-act="rot-r"  title="Rotate right">⟳</button>
+        <button data-act="rot-90" title="Rotate 90°">90°</button>
+        <button data-act="dup"    title="Duplicate">⧉</button>
+        <button data-act="front"  title="Bring to front">⬆</button>
+        <button data-act="del"    class="danger" title="Delete">🗑</button>
+      </div>
+    </div>
+
+    <!-- add-furniture launcher (mobile) -->
+    <button id="btn-add" class="add-fab">＋ Add furniture</button>
+  </main>
+
+  <!-- ===================== CATALOG DRAWER ===================== -->
+  <aside id="catalog" class="catalog">
+    <div class="catalog-head">
+      <strong>Furniture</strong>
+      <button id="catalog-close" class="ghost only-mobile">✕</button>
+    </div>
+    <div id="catalog-tabs" class="catalog-tabs"></div>
+    <div id="catalog-grid" class="catalog-grid"></div>
+    <p class="catalog-foot">Tap a piece to drop it on the <span id="cat-floor-name">Main Level</span>. Drag to position, then use the toolbar to rotate or delete.</p>
+  </aside>
+
+  <!-- ===================== SUGGESTIONS MODAL ===================== -->
+  <div id="suggest-modal" class="modal" hidden>
+    <div class="modal-card">
+      <button id="suggest-close" class="modal-close">✕</button>
+      <div id="suggest-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
