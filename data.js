@@ -52,7 +52,7 @@ window.FLOORPLAN = {
     ],
     doors: [
       { x:188, y:418, r:30, a0:170, a1:262 },  // entry (in the angled wall, foot of the lane)
-      { x:368, y:120, r:28, a0:0,   a1:90  },  // bedroom
+      { x:368, y:196, r:30, a0:270, a1:360 },  // bedroom (SW corner, swings into the room)
     ],
     fixtures: [
       { kind:"stairs",   x:299, y:315, w:48,  h:96, dir:"up", label:"UP" },
