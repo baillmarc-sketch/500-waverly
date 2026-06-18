@@ -22,8 +22,25 @@ const state = {
   showDims: true,
   selected: null,         // item ref
   guides: [],             // alignment guides shown while dragging
+  measuring: false,       // measure-tool active
+  meas: null,             // { a:{x,y}, b:{x,y} } in world inches
   layout: { main: [], roof: [] },
 };
+
+const SWATCHES = [
+  "#d8cdb8", // oatmeal
+  "#8c9a93", // sage
+  "#b08968", // tan leather
+  "#6b4f3a", // walnut
+  "#4b4f52", // charcoal
+  "#3c4a5e", // navy
+  "#b5764f", // terracotta
+  "#d9b3ad", // blush
+  "#5d7264", // forest
+  "#e7ddca", // cream
+  "#6b7280", // slate
+  "#c79a4b", // ochre
+];
 
 function toast(msg){
   const t = $("#toast"); t.textContent = msg; t.hidden = false;
@@ -241,13 +258,42 @@ function render(){
   // alignment guides (while dragging)
   if (state.guides.length) drawGuides();
 
+  // measure line
+  if (state.meas) drawMeasure();
+
   // selection
   if (state.selected && arr.includes(state.selected)) drawSelection(state.selected);
 
   ctx.restore();
   drawCompass();
   drawRotBadge();
+  if (state.meas) drawMeasureLabel();
   updateHud();
+}
+
+/* measure tool: dashed line + endpoint dots, drawn in the world transform */
+function drawMeasure(){
+  const { a, b } = state.meas;
+  ctx.save();
+  ctx.strokeStyle = "#c08457"; ctx.lineWidth = 2/state.scale;
+  ctx.setLineDash([6/state.scale, 4/state.scale]);
+  ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  ctx.setLineDash([]);
+  for (const pt of [a,b]){ ctx.beginPath(); ctx.arc(pt.x,pt.y, 4/state.scale, 0, 7); ctx.fillStyle="#c08457"; ctx.fill(); }
+  ctx.restore();
+}
+/* measure distance label, drawn in screen space (after restore) */
+function drawMeasureLabel(){
+  const { a, b } = state.meas;
+  const mx = state.panX + (a.x+b.x)/2*state.scale;
+  const my = state.panY + (a.y+b.y)/2*state.scale;
+  const txt = ftin(Math.hypot(b.x-a.x, b.y-a.y));
+  ctx.save();
+  ctx.font = "700 12px Inter, sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  const w = ctx.measureText(txt).width + 16;
+  ctx.fillStyle = "#332d27"; rr(mx-w/2, my-11, w, 22, 7); ctx.fill();
+  ctx.fillStyle = "#f3ece2"; ctx.fillText(txt, mx, my);
+  ctx.restore();
 }
 
 /* angle readout shown while rotating */
@@ -441,7 +487,7 @@ function drawPiece(it){
     ctx.shadowBlur = lifted ? 16 : 6;
     ctx.shadowOffsetY = lifted ? 9 : 3;
   }
-  drawShape(ctx, c.render, w, h, c.fill, { warn });
+  drawShape(ctx, c.render, w, h, it.color || c.fill, { warn });
   ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   ctx.restore();
 
@@ -613,6 +659,7 @@ function updateHud(){
     $("#sel-dims").textContent = `${ftin(c.w)} × ${ftin(c.h)}  ·  ${Math.round(((sel.rot%360)+360)%360)}°`;
   } else {
     selbar.hidden = true;
+    $("#swatch-pop").hidden = true;
   }
 
   // area readout — count + approx footprint of furniture on this floor
@@ -648,6 +695,7 @@ canvas.addEventListener("pointerdown", e=>{
   }
 
   const w = toWorld(pos.x,pos.y);
+  if (state.measuring){ mode="measure"; state.meas={ a:{x:w.x,y:w.y}, b:{x:w.x,y:w.y} }; render(); return; }
   // rotate handle?
   if (state.selected && items().includes(state.selected)){
     const hp = handleWorld(state.selected);
@@ -714,6 +762,8 @@ canvas.addEventListener("pointermove", e=>{
     ang = Math.round(ang/ROT_SNAP)*ROT_SNAP;
     state.selected.rot = ((ang%360)+360)%360;
     render(); updateHud();
+  } else if (mode==="measure" && state.meas){
+    state.meas.b = { x:w.x, y:w.y }; render();
   } else if (mode==="pan"){
     state.panX += pos.x-panSX; state.panY += pos.y-panSY;
     panSX=pos.x; panSY=pos.y; render();
@@ -745,7 +795,21 @@ function mid(a,b){ return { x:(a.x+b.x)/2, y:(a.y+b.y)/2 }; }
 /* ======================================================================
    SELECTION + ACTIONS
    ====================================================================== */
-function select(it){ state.selected = it; render(); }
+function select(it){ state.selected = it; $("#swatch-pop").hidden = true; render(); }
+
+function buildSwatches(){
+  const pop = $("#swatch-pop"); pop.innerHTML = "";
+  const reset = document.createElement("button");
+  reset.className = "swatch reset"; reset.textContent = "↺"; reset.title = "Default finish";
+  reset.addEventListener("click", ()=>{ if (state.selected){ delete state.selected.color; save(); render(); } });
+  pop.appendChild(reset);
+  for (const hex of SWATCHES){
+    const b = document.createElement("button");
+    b.className = "swatch"; b.style.background = hex; b.title = hex;
+    b.addEventListener("click", ()=>{ if (state.selected){ state.selected.color = hex; save(); render(); } });
+    pop.appendChild(b);
+  }
+}
 
 function addPiece(type){
   const r = canvas.getBoundingClientRect();
@@ -759,6 +823,7 @@ function addPiece(type){
 
 function act(a){
   const it=state.selected; if(!it) return;
+  if (a==="color"){ const pop=$("#swatch-pop"); pop.hidden=!pop.hidden; return; }
   if (a==="rot-l") it.rot=(((it.rot-15)%360)+360)%360;
   if (a==="rot-r") it.rot=(it.rot+15)%360;
   if (a==="rot-90") it.rot=(it.rot+90)%360;
@@ -934,13 +999,18 @@ function loadPreset(id){
 
 /* ---- shareable link (layout encoded in URL hash) ---- */
 function encodeLayout(){
-  const enc = fl => state.layout[fl].map(it=>[it.type, it.x, it.y, it.rot]);
+  const enc = fl => state.layout[fl].map(it=>{
+    const a=[it.type, it.x, it.y, it.rot]; if (it.color) a.push(it.color); return a;
+  });
   const json = JSON.stringify({ m:enc("main"), r:enc("roof") });
   return btoa(unescape(encodeURIComponent(json)));
 }
 function applyEncoded(str){
   const o = JSON.parse(decodeURIComponent(escape(atob(str))));
-  const dec = a => (a||[]).map(t=>({ type:t[0], x:t[1], y:t[2], rot:t[3], _id:uid++ }));
+  const dec = a => (a||[]).map(t=>{
+    const it={ type:t[0], x:t[1], y:t[2], rot:t[3], _id:uid++ };
+    if (t[4]) it.color=t[4]; return it;
+  });
   state.layout = { main: dec(o.m), roof: dec(o.r) };
 }
 function doShare(){
@@ -964,6 +1034,15 @@ function wire(){
     const m=$("#presets-menu"); m.hidden=!m.hidden;
   });
   $("#btn-share").addEventListener("click", doShare);
+  $("#btn-measure").addEventListener("click", e=>{
+    state.measuring = !state.measuring;
+    e.currentTarget.classList.toggle("active", state.measuring);
+    $(".stage").classList.toggle("measuring", state.measuring);
+    if (!state.measuring) state.meas = null;
+    select(null);
+    if (state.measuring) toast("Measure: drag across the plan to read a distance");
+    render();
+  });
   document.addEventListener("click", e=>{
     const m=$("#presets-menu");
     if (!m.hidden && !m.contains(e.target) && e.target.id!=="btn-presets") m.hidden=true;
@@ -1021,6 +1100,7 @@ function init(){
   if (!loaded && !load()) state.layout = cloneDefault();
   buildCatalog();
   buildPresetsMenu();
+  buildSwatches();
   wire();
   $("#cat-floor-name").textContent = window.FLOORPLAN[state.floor].label;
   resize();

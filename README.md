@@ -33,6 +33,10 @@ HTML/CSS/JS with no dependencies.
   *Convert-back 2-Bed* (the original config, with a second bedroom carved from the living room).
 - **Share** — **🔗 Share** copies a link with your exact arrangement baked in; open it on another
   device (or send it) to load that layout.
+- **Measure** — **📏** then drag across the plan to read any distance in feet/inches (check walkways,
+  TV viewing distance, how much room the dining chairs need).
+- **Finishes** — select a piece and hit **🎨** to recolor it (oatmeal, sage, charcoal, navy,
+  walnut, leather, blush…) — try the sectional in a few tones before you buy.
 - **Mobile + desktop** — pinch to zoom, drag to pan (wheel-zoom on desktop). Big touch targets,
   north compass, drop-shadowed furniture.
 - **Auto-saves** to your browser. Export/Import your layout as JSON to share or back up.
