@@ -187,6 +187,17 @@ const C = {
     p("nightstand",  498, 174, 90),
     p("dresser",     379, 116, 90),
   ],
+  bedroomDesk: [
+    // Same command-position bed on the east wall, but a compact desk tucks under
+    // the north corner window (low, keeps the view) with the dresser below it.
+    p("rug_8x10",    455, 138),
+    p("bed_queen",   467, 132, 90),     // headboard on the solid east wall (command)
+    p("nightstand",  498, 88,  90),
+    p("nightstand",  498, 176, 90),
+    p("desk_compact",398, 82),          // desk under the north window, facing the view
+    p("task_chair",  398, 110),         // Aeron in front
+    p("dresser",     379, 156, 90),     // dresser down the west wall, clear of the desk
+  ],
   wic: [
     p("wic_shelf",   352, 245, 90),     // double-hang on both long walls + center aisle
     p("wic_shelf",   384, 245, 90),
@@ -204,6 +215,13 @@ const C = {
     p("out_coffee",  250, 36),
     p("out_chair",   210, 36,  90),
     p("out_chair",   290, 36, -90),
+    // cluster of greenery massed in the far-right (east) corner of the balcony
+    p("plant",       480, 18),
+    p("plant",       480, 42),
+    p("plant",       462, 58),
+    p("plant",       458, 26),
+    p("plant",       440, 44),
+    p("plant",       444, 18),
   ],
   livingSectional: [
     // TV zone: wall-mounted TV (media console) on the east wall, L-sectional
@@ -275,14 +293,16 @@ const C = {
     p("dining_chair",228, 280),      p("dining_chair",258, 280),      p("dining_chair",288, 280),
     p("dining_chair",210, 258, 90),  p("dining_chair",306, 258, -90),
   ],
-  roof: [
-    // office INSIDE the enclosed roof landing (the stair-bulkhead room), tucked into
-    // the NE corner against the window — sheltered & climate-controlled, not exposed
+  // office INSIDE the enclosed roof landing (the stair-bulkhead room), tucked into
+  // the NE corner against the window — sheltered & climate-controlled, not exposed
+  roofOffice: [
     p("desk_compact",386, 332),         // 42"×20" — fits the ~48" landing bay with margin
     p("monitor",     386, 328),         // on the desk, against the north wall/window
     p("task_chair",  386, 366),         // Aeron-sized; tucks under, base sits ~14" proud
     p("file_cabinet",398, 392),         // mobile pedestal down the east wall
     p("bookshelf",   402, 420, 90),     // slim shelving down the east wall
+  ],
+  roofTerrace: [
     // lounge conversation (NW)
     p("rug_round",   150, 150),
     p("dining_round",150, 150),
@@ -302,10 +322,12 @@ const C = {
     p("planter",     150,  90),         // lounge backdrop / wood element
   ],
 };
+// full roof = office nook in the landing + terrace; bedroom-office layout drops the office
+C.roof = [ ...C.roofOffice, ...C.roofTerrace ];
 
 /* =================== PRESETS =================== */
-const oneBed = (living, dining=C.dining) =>
-  [ ...C.bedroom, ...C.wic, ...living, ...dining, ...C.balcony ];
+const oneBed = (living, dining=C.dining, bedroom=C.bedroom) =>
+  [ ...bedroom, ...C.wic, ...living, ...dining, ...C.balcony ];
 
 window.PRESETS = {
   suggested: {
@@ -333,8 +355,13 @@ window.PRESETS = {
     desc: "Sectional, extra lounge chairs and a table for 8 — built for dinners.",
     main: oneBed(C.livingEntertainer, C.diningLarge), roof: [ ...C.roof ],
   },
+  bedroomOffice: {
+    name: "Bedroom Office",
+    desc: "Desk in the bedroom (bed still in command position) — keeps work out of the living room; roof landing left open.",
+    main: oneBed(C.livingSectional, C.dining, C.bedroomDesk), roof: [ ...C.roofTerrace ],
+  },
 };
-window.PRESET_ORDER = ["suggested", "twoSofa", "facing", "reading", "entertainer"];
+window.PRESET_ORDER = ["suggested", "twoSofa", "facing", "reading", "entertainer", "bedroomOffice"];
 
 /* the seed layout used on first load / reset */
 window.DEFAULT_LAYOUT = { main: window.PRESETS.suggested.main, roof: window.PRESETS.suggested.roof };
