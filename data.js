@@ -37,19 +37,21 @@ window.FLOORPLAN = {
       // stair shaft
       [299,315,299,411],[299,315,347,315],
       // kitchen
-      [204,315,299,315],
-      // west service cluster: bathroom (left) + CL-over-W/D column (right)
-      [40,210,204,210],     // cluster north wall (Living/Dining above)
-      [204,210,204,417],    // cluster east wall (kitchen beyond)
-      [130,210,130,400],    // bath / laundry-closet column divider
-      [130,300,204,300],    // CL (upper) over W/D (lower)
+      [205,315,299,315],    // kitchen north wall
+      [205,315,205,420],    // kitchen west wall (entrance lane beyond)
+      // west cluster: bathroom (left) + stacked CL-over-W/D closets, with the
+      // ENTRANCE LANE (open foyer) running between the closet column and kitchen
+      [40,210,165,210],     // cluster north wall (Living/Dining above)
+      [110,210,110,337],    // bath / closet-column divider
+      [165,210,165,394],    // closet-column east wall (entry lane beyond)
+      [110,300,165,300],    // CL (upper) over W/D (lower)
     ],
     windows: [
       [200,70,345,70],   // living glass / balcony doors
       [368,70,470,70],   // bedroom glass / balcony door
     ],
     doors: [
-      { x:175, y:422, r:34, a0:175, a1:265 },  // entry (on the angled corner)
+      { x:188, y:418, r:30, a0:170, a1:262 },  // entry (in the angled wall, foot of the lane)
       { x:368, y:120, r:28, a0:0,   a1:90  },  // bedroom
     ],
     fixtures: [
@@ -59,12 +61,12 @@ window.FLOORPLAN = {
       { kind:"appliance",x:205, y:400, w:23,  h:16, label:"R" },   // fridge
       { kind:"appliance",x:239, y:400, w:26,  h:16, label:"" },    // cooktop
       { kind:"appliance",x:276, y:400, w:23,  h:16, label:"MW" },  // microwave
-      // guest bathroom (left of the column)
-      { kind:"tub",      x:46,  y:220, w:32,  h:60 },              // tub along the west wall
-      { kind:"vanity",   x:95,  y:228, w:40,  h:14 },
-      { kind:"toilet",   x:100, y:300 },
-      // stacked laundry in the lower column box
-      { kind:"wd",       x:148, y:318, w:34,  h:44, label:"W/D" },
+      // guest bathroom (far left)
+      { kind:"tub",      x:44,  y:220, w:30,  h:58 },              // tub along the west wall
+      { kind:"vanity",   x:70,  y:226, w:34,  h:13 },
+      { kind:"toilet",   x:90,  y:276 },
+      // stacked W/D in the lower closet box
+      { kind:"wd",       x:120, y:304, w:34,  h:40, label:"" },
       // en-suite bath (off the bedroom)
       { kind:"shower",   x:469, y:297, w:38,  h:47 },
       { kind:"toilet",   x:412, y:312 },
@@ -76,10 +78,10 @@ window.FLOORPLAN = {
       { text:"WIC",             sub:"",                x:368, y:278 },
       { text:"CL",              sub:"",                x:480, y:223 },
       { text:"Bath",            sub:"",                x:450, y:300 },
-      { text:"Bath",            sub:"",                x:82,  y:262 },
-      { text:"CL",              sub:"",                x:167, y:250 },
-      { text:"W/D",             sub:"",                x:167, y:335 },
-      { text:"Entry",           sub:"",                x:118, y:402 },
+      { text:"Bath",            sub:"",                x:72,  y:250 },
+      { text:"CL",              sub:"",                x:137, y:255 },
+      { text:"W/D",             sub:"",                x:137, y:322 },
+      { text:"Entry",           sub:"",                x:185, y:404 },
     ],
   },
 
