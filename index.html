@@ -19,21 +19,22 @@
     </div>
 
     <div class="floor-switch" role="tablist" aria-label="Floor">
-      <button class="fs-btn active" data-floor="main" role="tab">Main</button>
-      <button class="fs-btn" data-floor="roof" role="tab">Roof</button>
+      <button class="fs-btn active" data-floor="main" role="tab" aria-selected="true">Main</button>
+      <button class="fs-btn" data-floor="roof" role="tab" aria-selected="false">Roof</button>
     </div>
 
     <div class="top-actions">
-      <button id="btn-presets" class="ghost wide" title="Starter layouts">⌂&nbsp;Layouts</button>
-      <button id="btn-suggestions" class="ghost wide" title="Decorator notes">💡&nbsp;Ideas</button>
-      <button id="btn-share" class="ghost wide" title="Copy a shareable link">🔗&nbsp;Share</button>
-      <button id="btn-measure" class="ghost" title="Measure a distance">📏</button>
-      <button id="btn-grid"   class="ghost" title="Toggle grid">▦</button>
-      <button id="btn-dims"   class="ghost active" title="Toggle room dimensions">⌗ ft</button>
-      <button id="btn-reset"  class="ghost wide" title="Reset to the Feng Shui layout">⟲&nbsp;Reset</button>
-      <button id="btn-export" class="ghost" title="Export layout">↥</button>
-      <button id="btn-import" class="ghost" title="Import layout">↧</button>
-      <button id="btn-more"   class="ghost" title="More" aria-label="More options">⋯</button>
+      <button id="btn-presets" class="ghost wide" title="Starter layouts" aria-label="Starter layouts">⌂<span class="lbl">&nbsp;Layouts</span></button>
+      <button id="btn-suggestions" class="ghost wide" title="Decorator &amp; Feng Shui notes" aria-label="Decorator ideas">💡<span class="lbl">&nbsp;Ideas</span></button>
+      <button id="btn-share" class="ghost wide" title="Copy a shareable link" aria-label="Share link">🔗<span class="lbl">&nbsp;Share</span></button>
+      <button id="btn-measure" class="ghost" title="Measure a distance" aria-label="Measure">📏</button>
+      <button id="btn-grid"   class="ghost" title="Toggle grid" aria-label="Toggle grid">▦</button>
+      <button id="btn-dims"   class="ghost active" title="Toggle room dimensions" aria-label="Toggle dimensions">⌗ ft</button>
+      <button id="btn-reset"  class="ghost wide" title="Reset to the Feng Shui layout" aria-label="Reset to Feng Shui layout">⟲<span class="lbl">&nbsp;Reset</span></button>
+      <button id="btn-export" class="ghost" title="Export layout" aria-label="Export layout">↥</button>
+      <button id="btn-import" class="ghost" title="Import layout" aria-label="Import layout">↧</button>
+      <button id="btn-help"   class="ghost" title="How it works" aria-label="How it works">?</button>
+      <button id="btn-more"   class="ghost" title="More" aria-label="More options" aria-haspopup="menu">⋯</button>
       <input id="file-import" type="file" accept="application/json" hidden />
     </div>
   </header>
@@ -43,11 +44,13 @@
   <!-- mobile overflow menu -->
   <div id="more-menu" class="menu" hidden></div>
   <!-- transient toast -->
-  <div id="toast" class="toast" hidden></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <!-- catalog backdrop (mobile, tap to dismiss) -->
+  <div id="catalog-backdrop" class="catalog-backdrop" hidden></div>
 
   <!-- ===================== STAGE ===================== -->
   <main class="stage">
-    <canvas id="plan"></canvas>
+    <canvas id="plan" role="img" aria-label="Interactive floor plan — drag furniture to arrange the apartment"></canvas>
 
     <!-- floating zoom controls -->
     <div class="zoom-controls">
@@ -69,13 +72,13 @@
         <span id="sel-dims" class="sel-dims"></span>
       </div>
       <div class="sel-tools">
-        <button data-act="rot-l"  title="Rotate left">⟲</button>
-        <button data-act="rot-r"  title="Rotate right">⟳</button>
-        <button data-act="rot-90" title="Rotate 90°">90°</button>
-        <button data-act="color"  title="Color / finish">🎨</button>
-        <button data-act="dup"    title="Duplicate">⧉</button>
-        <button data-act="front"  title="Bring to front">⬆</button>
-        <button data-act="del"    class="danger" title="Delete">🗑</button>
+        <button data-act="rot-l"  title="Rotate left"  aria-label="Rotate left">⟲</button>
+        <button data-act="rot-r"  title="Rotate right" aria-label="Rotate right">⟳</button>
+        <button data-act="rot-90" title="Rotate 90°"   aria-label="Rotate 90 degrees">90°</button>
+        <button data-act="color"  title="Color / finish" aria-label="Color and finish">🎨</button>
+        <button data-act="dup"    title="Duplicate"    aria-label="Duplicate">⧉</button>
+        <button data-act="front"  title="Bring to front" aria-label="Bring to front">⬆</button>
+        <button data-act="del"    class="danger" title="Delete" aria-label="Delete">🗑</button>
       </div>
     </div>
 
@@ -88,9 +91,10 @@
 
   <!-- ===================== CATALOG DRAWER ===================== -->
   <aside id="catalog" class="catalog">
+    <div id="catalog-grab" class="catalog-grab only-mobile" aria-hidden="true"></div>
     <div class="catalog-head">
       <strong>Furniture</strong>
-      <button id="catalog-close" class="ghost only-mobile">✕</button>
+      <button id="catalog-close" class="ghost only-mobile" aria-label="Close furniture panel">✕</button>
     </div>
     <div id="catalog-tabs" class="catalog-tabs"></div>
     <div id="catalog-grid" class="catalog-grid"></div>
@@ -100,8 +104,38 @@
   <!-- ===================== SUGGESTIONS MODAL ===================== -->
   <div id="suggest-modal" class="modal" hidden>
     <div class="modal-card">
-      <button id="suggest-close" class="modal-close">✕</button>
+      <button id="suggest-close" class="modal-close" aria-label="Close">✕</button>
       <div id="suggest-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ===================== HELP MODAL ===================== -->
+  <div id="help-modal" class="modal" hidden>
+    <div class="modal-card">
+      <button id="help-close" class="modal-close" aria-label="Close">✕</button>
+      <div class="modal-body">
+        <h1>How it works</h1>
+        <p class="lede">A quick tour — everything is to scale and auto-saves on this device.</p>
+        <h2>🪑 Arrange</h2>
+        <ul>
+          <li><strong>Drag</strong> any piece to move it (it snaps to walls and lines up with other pieces).</li>
+          <li><strong>Double-tap</strong> a piece — or grab the round handle — to <strong>rotate</strong> it.</li>
+          <li>Select a piece for the toolbar: rotate, recolor 🎨, duplicate, bring to front, delete.</li>
+          <li>Made a mistake? <strong>Undo</strong> (Ctrl/⌘ Z, the toast button, or ⋯ → Undo).</li>
+        </ul>
+        <h2>➕ Add &amp; switch</h2>
+        <ul>
+          <li><strong>＋ Add furniture</strong> opens the catalog — tap a piece to drop it in.</li>
+          <li>Toggle <strong>Main / Roof</strong> at the top to switch floors.</li>
+          <li><strong>⌂ Layouts</strong> loads designer templates; <strong>⟲ Reset</strong> restores the Feng Shui layout.</li>
+        </ul>
+        <h2>🔎 View &amp; tools</h2>
+        <ul>
+          <li><strong>Pinch</strong> (or scroll) to zoom, drag the background to pan, ⤢ to re-fit.</li>
+          <li><strong>📏 Measure</strong>: drag across the plan to read a distance.</li>
+          <li><strong>🔗 Share</strong> copies a link with your exact layout; <strong>💡 Ideas</strong> has decorator &amp; Feng Shui notes.</li>
+        </ul>
+      </div>
     </div>
   </div>
 
