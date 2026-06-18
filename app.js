@@ -1098,7 +1098,11 @@ function wire(){
 
   $("#btn-grid").addEventListener("click", e=>{ state.showGrid=!state.showGrid; e.currentTarget.classList.toggle("active",state.showGrid); render(); });
   $("#btn-dims").addEventListener("click", e=>{ state.showDims=!state.showDims; e.currentTarget.classList.toggle("active",state.showDims); render(); });
-  $("#btn-reset").addEventListener("click", ()=>{ if(confirm("Reset both floors to the suggested layout? Your current arrangement will be replaced.")){ state.layout=cloneDefault(); state.selected=null; save(); render(); } });
+  $("#btn-reset").addEventListener("click", ()=>{
+    if (confirm("Reset to the Feng Shui layout (command-position bed, books on the solid wall, dining for 6, roof office by the terrace door)?\n\nThis replaces your current arrangement on both floors.")){
+      loadPreset("suggested");
+    }
+  });
   $("#btn-export").addEventListener("click", exportLayout);
   $("#btn-import").addEventListener("click", ()=> $("#file-import").click());
   $("#file-import").addEventListener("change", e=>{ if(e.target.files[0]) importLayout(e.target.files[0]); e.target.value=""; });
