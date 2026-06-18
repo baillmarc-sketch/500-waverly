@@ -24,8 +24,8 @@ window.FLOORPLAN = {
         label: "Balcony", dim: "24'8\" × 5'0\"", lx: 360, ly: 30 },
     ],
     walls: [
-      // primary bedroom box
-      [368,70,368,205],[368,205,509,205],
+      // primary bedroom box (west wall split for the SW door opening, y166-196)
+      [368,70,368,166],[368,196,368,205],[368,205,509,205],
       // angled wall by the stairs (faces the living room)
       [368,205,345,217],
       // WIC
@@ -36,8 +36,7 @@ window.FLOORPLAN = {
       [391,242,509,242],[391,242,391,346],[391,346,509,346],
       // stair shaft
       [299,315,299,411],[299,315,347,315],
-      // kitchen
-      [205,315,299,315],    // kitchen north wall
+      // kitchen — open-plan to the Living/Dining (no north wall); island faces in
       [205,315,205,420],    // kitchen west wall (entrance lane beyond)
       // west cluster: bathroom (left) + stacked CL-over-W/D closets, with the
       // ENTRANCE LANE (open foyer) running between the closet column and kitchen
@@ -195,12 +194,12 @@ const C = {
     p("rug_8x10",    235, 162),
     p("sectional",   240, 162, 180),
     p("coffee_table",322, 162),
-    p("console_tv",  352, 162, 90),
+    p("console_tv",  360, 130, 90),     // TV on the bedroom wall, above the door
     p("armchair",    118, 120, -30),
-    p("bookshelf",   352, 110, 90),
-    p("bookshelf",    96,  78),
+    p("bookshelf",    96,  78),         // book wall on the solid NW wall
     p("bookshelf",   134,  78),
-    p("plant",       338, 198),
+    p("bookshelf",   172,  78),
+    p("plant",       338, 196),
   ],
   livingTwoSofa: [
     p("rug_8x10",    235, 162),
@@ -208,11 +207,11 @@ const C = {
     p("loveseat",    300, 172, -90),
     p("coffee_table",245, 162),
     p("armchair",    120, 178, 20),
-    p("console_tv",  352, 162, 90),
-    p("bookshelf",   352, 110, 90),
+    p("console_tv",  360, 130, 90),
     p("bookshelf",    96,  78),
     p("bookshelf",   134,  78),
-    p("plant",       338, 198),
+    p("bookshelf",   172,  78),
+    p("plant",       338, 196),
   ],
   livingFacing: [
     p("rug_8x10",    240, 162),
@@ -220,11 +219,11 @@ const C = {
     p("loveseat",    240, 210, 180),    // south sofa, faces in
     p("coffee_table",240, 162),
     p("armchair",    158, 162, 90),     // end chair toward the TV
-    p("console_tv",  352, 162, 90),
-    p("bookshelf",   352, 110, 90),
+    p("console_tv",  360, 130, 90),
     p("bookshelf",    96,  78),
     p("bookshelf",   134,  78),
-    p("plant",       338, 198),
+    p("bookshelf",   172,  78),
+    p("plant",       338, 196),
   ],
   livingReading: [
     p("rug_8x10",    245, 162),
@@ -232,22 +231,22 @@ const C = {
     p("armchair",    278, 122, 200),
     p("armchair",    278, 202, 160),
     p("coffee_table",252, 162),
-    p("console_tv",  352, 162, 90),
-    p("bookshelf",   352, 105, 90),     // a wall of books
-    p("bookshelf",   352, 220, 90),
-    p("bookshelf",    96,  78),
-    p("bookshelf",   134,  78),
-    p("plant",       330, 120),
+    p("console_tv",  360, 130, 90),
+    p("bookshelf",    70,  78),         // a wall of books on the NW wall
+    p("bookshelf",   106,  78),
+    p("bookshelf",   142,  78),
+    p("bookshelf",   178,  78),
+    p("plant",       330, 118),
   ],
   livingEntertainer: [
     p("rug_8x10",    245, 168),
     p("sectional",   245, 162, 180),
     p("armchair",    118, 120, -30),
-    p("armchair",    342, 214, -110),
+    p("armchair",    323, 200, -90),
     p("coffee_table",325, 162),
-    p("console_tv",  352, 162, 90),
-    p("bookshelf",   352, 110, 90),
-    p("plant",       335, 120),
+    p("console_tv",  360, 130, 90),
+    p("bookshelf",   110,  78),
+    p("plant",       338, 118),
   ],
   diningLarge: [
     p("rug_6x9",     258, 258, 90),
