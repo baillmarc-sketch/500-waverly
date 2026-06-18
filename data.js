@@ -195,8 +195,8 @@ const C = {
   ],
   balcony: [
     p("out_coffee",  250, 36),
-    p("out_chair",   222, 36,  90),
-    p("out_chair",   278, 36, -90),
+    p("out_chair",   210, 36,  90),
+    p("out_chair",   290, 36, -90),
   ],
   livingSectional: [
     p("rug_8x10",    235, 162),
@@ -278,8 +278,8 @@ const C = {
     p("out_lounge",  175, 330, 10),
     // dining (NE)
     p("out_dining",  370, 150),
-    p("out_chair",   334, 138,  90), p("out_chair", 406, 138, -90),
-    p("out_chair",   370, 110, 180), p("out_chair", 370, 190),
+    p("out_chair",   322, 150,  90), p("out_chair", 418, 150, -90),
+    p("out_chair",   370, 104, 180), p("out_chair", 370, 196),
     // grill + greenery
     p("grill",       110, 320),
     p("plant",        60, 250),
