@@ -1035,6 +1035,7 @@ function suggestionsHTML(){
     <li>By my read the clear floor beside the stair is roughly <strong>48" wide</strong> — enough for a 48" desk against the wall with a rolling chair in front (a desk + chair wants about <strong>48" × 54"</strong> of footprint). It's snug but workable; <strong>verify the tile count</strong> (looks like 12" tiles) when you have the keys so we can lock the exact spot.</li>
     <li>Since it's inside you can use normal furniture — no weatherproofing. Add a slim <strong>shelf</strong> down the side wall and a power source, and it's a real work-from-home nook.</li>
     <li><strong>Your Aeron fits.</strong> A Size B is ~27"×27" with the arms ~26" off the floor, so it tucks under any flat-top desk (~28" underside) — arms clear, no drawer box in the way. Tucked, the back + base sit ~14" proud, so the desk+chair reads about <strong>42"×34"</strong> parked and ~48" when you roll out. I've dropped a <strong>Compact Desk (42"×20")</strong> + an <strong>Aeron-sized task chair</strong> into the nook so the fit is to scale.</li>
+    <li>Also added a <strong>monitor</strong> on the desk and a small <strong>file cabinet</strong> down the east wall (with the slim bookshelf) — the whole nook stays <em>inside</em> the landing, clear of the stair and the terrace door swing.</li>
   </ul>
 
   <h2>🌇 Balcony &amp; roof terrace (outdoor furniture staying)</h2>
