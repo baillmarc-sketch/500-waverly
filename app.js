@@ -419,8 +419,12 @@ function drawFixture(f){
       break;
     }
     case "counter": case "vanity": {
-      rr(f.x,f.y,f.w,f.h,3); ctx.fillStyle="#e8e0d3"; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=stroke; ctx.stroke();
-      if (f.kind==="vanity"){ ctx.beginPath(); ctx.ellipse(f.x+f.w/2,f.y+f.h/2,8,5,0,0,7); ctx.strokeStyle="#9a8f80"; ctx.stroke(); }
+      rr(f.x,f.y,f.w,f.h,3); ctx.fillStyle="#efe7da"; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=stroke; ctx.stroke();
+      if (f.kind==="vanity"){
+        ctx.beginPath(); ctx.ellipse(f.x+f.w/2,f.y+f.h/2,9,5.5,0,0,7); ctx.fillStyle="#eef3f4"; ctx.fill();
+        ctx.lineWidth=1; ctx.strokeStyle="#c2cdd0"; ctx.stroke();
+        ctx.fillStyle="#b9c2c4"; ctx.beginPath(); ctx.arc(f.x+f.w/2, f.y+3, 1.6,0,7); ctx.fill();
+      }
       break;
     }
     case "appliance": {
@@ -430,20 +434,39 @@ function drawFixture(f){
       break;
     }
     case "tub": {
-      rr(f.x,f.y,f.w,f.h,8); ctx.fillStyle="#eef1f2"; ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle=stroke; ctx.stroke();
-      rr(f.x+4,f.y+4,f.w-8,f.h-8,6); ctx.lineWidth=1; ctx.strokeStyle="#b9c2c4"; ctx.stroke();
+      rr(f.x,f.y,f.w,f.h,9); ctx.fillStyle="#f4f7f8"; ctx.fill(); ctx.lineWidth=1.8; ctx.strokeStyle=stroke; ctx.stroke();
+      const vert = f.h >= f.w;
+      if (vert) rr(f.x+4, f.y+11, f.w-8, f.h-17, 7); else rr(f.x+11, f.y+4, f.w-17, f.h-8, 7);
+      ctx.fillStyle="#e8eef0"; ctx.fill(); ctx.lineWidth=1; ctx.strokeStyle="#c2cdd0"; ctx.stroke();
+      ctx.fillStyle="#b9c2c4";
+      if (vert){
+        ctx.beginPath(); ctx.arc(f.x+f.w/2, f.y+f.h-9, 1.6,0,7); ctx.fill();   // drain (foot)
+        ctx.beginPath(); ctx.arc(f.x+f.w/2, f.y+6,    2,  0,7); ctx.fill();    // faucet (head)
+      } else {
+        ctx.beginPath(); ctx.arc(f.x+f.w-9, f.y+f.h/2, 1.6,0,7); ctx.fill();
+        ctx.beginPath(); ctx.arc(f.x+6,     f.y+f.h/2, 2,  0,7); ctx.fill();
+      }
       break;
     }
     case "shower": {
-      rr(f.x,f.y,f.w,f.h,2); ctx.fillStyle="#eef1f2"; ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle=stroke; ctx.stroke();
-      ctx.strokeStyle="#c2cacb"; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(f.x,f.y); ctx.lineTo(f.x+f.w,f.y+f.h); ctx.moveTo(f.x+f.w,f.y); ctx.lineTo(f.x,f.y+f.h); ctx.stroke();
+      rr(f.x,f.y,f.w,f.h,3); ctx.fillStyle="#eef3f4"; ctx.fill(); ctx.lineWidth=1.8; ctx.strokeStyle=stroke; ctx.stroke();
+      ctx.save(); rr(f.x,f.y,f.w,f.h,3); ctx.clip();
+      ctx.strokeStyle="#d6dfe1"; ctx.lineWidth=0.7;                            // tile grid
+      for (let gx=f.x+8; gx<f.x+f.w; gx+=8){ ctx.beginPath(); ctx.moveTo(gx,f.y); ctx.lineTo(gx,f.y+f.h); ctx.stroke(); }
+      for (let gy=f.y+8; gy<f.y+f.h; gy+=8){ ctx.beginPath(); ctx.moveTo(f.x,gy); ctx.lineTo(f.x+f.w,gy); ctx.stroke(); }
+      ctx.restore();
+      ctx.strokeStyle="#9aa6a8"; ctx.lineWidth=1.2;                            // linear drain
+      ctx.beginPath(); ctx.moveTo(f.x+4, f.y+f.h-5); ctx.lineTo(f.x+f.w-4, f.y+f.h-5); ctx.stroke();
+      ctx.strokeStyle="#8fb3cf"; ctx.lineWidth=2;                              // glass door edge
+      ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x, f.y+f.h); ctx.stroke();
+      ctx.fillStyle="#b9c2c4"; ctx.beginPath(); ctx.arc(f.x+f.w-7, f.y+7, 2.2,0,7); ctx.fill(); // head
       break;
     }
     case "toilet": {
-      ctx.fillStyle="#eef1f2"; ctx.strokeStyle=stroke; ctx.lineWidth=1.5;
-      rr(f.x-6,f.y-9,12,8,2); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(f.x,f.y+3,7,9,0,0,7); ctx.fillStyle="#eef1f2"; ctx.fill(); ctx.stroke();
+      ctx.fillStyle="#f4f7f8"; ctx.strokeStyle=stroke; ctx.lineWidth=1.4;
+      rr(f.x-7,f.y-10,14,8,2); ctx.fill(); ctx.stroke();                       // tank
+      ctx.beginPath(); ctx.ellipse(f.x,f.y+3,7,9,0,0,7); ctx.fillStyle="#f4f7f8"; ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(f.x,f.y+3,4.4,6,0,0,7); ctx.lineWidth=0.8; ctx.strokeStyle="#c2cdd0"; ctx.stroke();
       break;
     }
     case "wd": {
