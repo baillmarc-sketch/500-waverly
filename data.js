@@ -24,9 +24,9 @@ window.FLOORPLAN = {
         label: "Balcony", dim: "24'8\" × 5'0\"", lx: 360, ly: 30 },
     ],
     walls: [
-      // primary bedroom box (west wall split for the SW door opening, y166-196)
-      [368,70,368,166],[368,196,368,205],[368,205,509,205],
-      // angled wall by the stairs (faces the living room)
+      // primary bedroom box
+      [368,70,368,205],[368,205,509,205],
+      // angled wall by the stairs — the bedroom door opens here
       [368,205,345,217],
       // WIC
       [345,217,345,346],[345,217,391,217],[345,346,391,346],
@@ -50,8 +50,14 @@ window.FLOORPLAN = {
       [368,70,470,70],   // bedroom glass / balcony door
     ],
     doors: [
-      { x:188, y:418, r:30, a0:170, a1:262 },  // entry (in the angled wall, foot of the lane)
-      { x:368, y:196, r:30, a0:270, a1:360 },  // bedroom (SW corner, swings into the room)
+      { x:188, y:418, r:30, a0:170, a1:262, gap:[178,407,198,429] },           // entry
+      { x:366, y:206, r:28, a0:268, a1:358, gap:[368,205,345,217] },            // bedroom (angled wall)
+      { x:391, y:280, r:26, a0:268, a1:358, gap:[391,250,391,280] },            // en-suite bath (from WIC)
+      { x:380, y:217, r:24, a0:92,  a1:182, gap:[350,217,380,217] },            // WIC (from bedroom zone)
+      { x:462, y:205, r:24, a0:2,   a1:92,  gap:[460,205,492,205] },            // bedroom CL
+      { x:88,  y:210, r:24, a0:92,  a1:182, gap:[60,210,90,210] },              // guest bath (from living)
+      { x:165, y:248, r:22, a0:180, a1:270, gap:[165,220,165,248] },            // west CL (from lane)
+      { x:165, y:344, r:22, a0:180, a1:270, gap:[165,316,165,344] },            // W/D closet (from lane)
     ],
     fixtures: [
       { kind:"stairs",   x:299, y:315, w:48,  h:96, dir:"up", label:"UP" },
@@ -66,10 +72,10 @@ window.FLOORPLAN = {
       { kind:"toilet",   x:90,  y:276 },
       // stacked W/D in the lower closet box
       { kind:"wd",       x:120, y:304, w:34,  h:40, label:"" },
-      // en-suite bath (off the bedroom)
-      { kind:"shower",   x:469, y:297, w:38,  h:47 },
-      { kind:"toilet",   x:412, y:312 },
-      { kind:"vanity",   x:393, y:248, w:56,  h:16 },
+      // en-suite bath: shower in the SW, vanity along the north wall, toilet on the east
+      { kind:"shower",   x:395, y:296, w:42,  h:48 },
+      { kind:"vanity",   x:444, y:246, w:62,  h:16 },
+      { kind:"toilet",   x:487, y:300 },
     ],
     labels: [
       { text:"Primary Bedroom", sub:"11'8\" × 11'0\"", x:438, y:130 },
@@ -97,7 +103,9 @@ window.FLOORPLAN = {
       [250,320,410,320],[250,320,250,470],[410,320,410,470],
     ],
     windows: [],
-    doors: [],
+    doors: [
+      { x:290, y:320, r:26, a0:92, a1:182, gap:[256,320,290,320] },  // terrace door off the landing
+    ],
     fixtures: [
       { kind:"stairs",   x:298, y:352, w:64, h:104, dir:"down", label:"DN" },
       { kind:"planters", x:70,  y:46,  w:160, h:18 },
@@ -105,7 +113,7 @@ window.FLOORPLAN = {
       { kind:"planters", x:418, y:140, w:18,  h:130 },
     ],
     labels: [
-      { text:"Landing / Office", sub:"covered", x:330, y:340 },
+      { text:"Landing", sub:"stair down", x:372, y:400 },
     ],
   },
 };
@@ -256,21 +264,26 @@ const C = {
     p("dining_chair",210, 258, 90),  p("dining_chair",306, 258, -90),
   ],
   roof: [
-    p("desk",        200, 380, 90),
-    p("office_chair",236, 380),
-    p("bookshelf",   175, 360),
+    // office on the deck right beside the terrace door (back to the bulkhead, facing the view)
+    p("desk",        320, 306),
+    p("office_chair",320, 282),
+    p("bookshelf",   366, 306),
+    // lounge conversation (NW)
     p("rug_round",   150, 150),
     p("dining_round",150, 150),
     p("out_chair",   108, 150,  90), p("out_chair", 192, 150, -90),
     p("out_chair",   150, 108, 180), p("out_chair", 150, 192),
-    p("out_lounge",  235, 250, 22),
-    p("out_lounge",  300, 268, 22),
-    p("out_dining",  360, 150),
-    p("out_chair",   322, 138,  90), p("out_chair", 398, 138, -90),
-    p("out_chair",   360, 110, 180), p("out_chair", 360, 190),
-    p("grill",       398, 300),
-    p("plant",        60, 300),
-    p("planter",     420, 320),
+    // sun loungers (W)
+    p("out_lounge",  175, 250, 10),
+    p("out_lounge",  175, 330, 10),
+    // dining (NE)
+    p("out_dining",  370, 150),
+    p("out_chair",   334, 138,  90), p("out_chair", 406, 138, -90),
+    p("out_chair",   370, 110, 180), p("out_chair", 370, 190),
+    // grill + greenery
+    p("grill",       110, 320),
+    p("plant",        60, 250),
+    p("planter",     420, 360),
   ],
 };
 

@@ -397,10 +397,17 @@ function drawLabel(l){
 /* ---- doors ---- */
 function drawDoor(d){
   ctx.save();
-  ctx.strokeStyle = "#a89a85"; ctx.lineWidth = 1.5; ctx.lineCap = "round";
-  // swing arc
+  ctx.lineCap = "butt";
+  // cut the opening: paint floor colour over the wall segment
+  if (d.gap){
+    ctx.strokeStyle = d.over || "#f3e7d2";
+    ctx.lineWidth = WALL + 3;
+    ctx.beginPath(); ctx.moveTo(d.gap[0],d.gap[1]); ctx.lineTo(d.gap[2],d.gap[3]); ctx.stroke();
+  }
+  // swing arc + leaf so the doorway reads clearly
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#a89a85"; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.arc(d.x, d.y, d.r, d.a0*Math.PI/180, d.a1*Math.PI/180); ctx.stroke();
-  // door leaf at the open position, so the opening reads clearly
   const a = d.a1*Math.PI/180;
   ctx.lineWidth = 2.4;
   ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + d.r*Math.cos(a), d.y + d.r*Math.sin(a)); ctx.stroke();
