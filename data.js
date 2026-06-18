@@ -61,11 +61,14 @@ window.FLOORPLAN = {
     ],
     fixtures: [
       { kind:"stairs",   x:299, y:315, w:48,  h:96, dir:"up", label:"UP" },
-      { kind:"island",   x:214, y:330, w:76,  h:40 },
-      { kind:"counter",  x:204, y:399, w:95,  h:18 },
-      { kind:"appliance",x:205, y:400, w:23,  h:16, label:"R" },   // fridge
-      { kind:"appliance",x:239, y:400, w:26,  h:16, label:"" },    // cooktop
-      { kind:"appliance",x:276, y:400, w:23,  h:16, label:"MW" },  // microwave
+      // U-shaped kitchen — the peninsula is CONNECTED, not floating: a back-wall run
+      // on the south, a tall-cabinet/fridge return down the east wall, and the
+      // waterfall peninsula (with sink) as the north face that opens to the room.
+      { kind:"island",   x:212, y:330, w:80,  h:40 },               // peninsula w/ sink — east end ties into the cabinet wall
+      { kind:"counter",  x:204, y:399, w:95,  h:18 },               // back-wall run (range + uppers)
+      { kind:"appliance",x:232, y:401, w:30,  h:14, label:"" },     // range / cooktop on the back wall
+      { kind:"counter",  x:282, y:330, w:17,  h:87 },               // east return: tall cabinets — connects peninsula to back run
+      { kind:"appliance",x:283, y:392, w:15,  h:22, label:"R" },    // fridge in the tall-cabinet column
       // guest bathroom (far left)
       { kind:"tub",      x:44,  y:220, w:30,  h:58 },              // tub along the west wall
       { kind:"vanity",   x:70,  y:226, w:34,  h:13 },
@@ -79,7 +82,7 @@ window.FLOORPLAN = {
     ],
     labels: [
       { text:"Primary Bedroom", sub:"11'8\" × 11'0\"", x:438, y:130 },
-      { text:"Kitchen",         sub:"9'10\" × 8'2\"",  x:250, y:360 },
+      { text:"Kitchen",         sub:"9'10\" × 8'2\"",  x:244, y:385 },
       { text:"WIC",             sub:"",                x:368, y:278 },
       { text:"CL",              sub:"",                x:480, y:223 },
       { text:"Bath",            sub:"",                x:450, y:300 },
@@ -113,7 +116,7 @@ window.FLOORPLAN = {
       { kind:"planters", x:418, y:140, w:18,  h:130 },
     ],
     labels: [
-      { text:"Landing", sub:"stair down", x:372, y:400 },
+      { text:"Landing", sub:"office nook", x:274, y:436 },
     ],
   },
 };
@@ -193,9 +196,6 @@ const C = {
     p("dining_chair",234, 248, 180), p("dining_chair",262, 248, 180), p("dining_chair",290, 248, 180),
     p("dining_chair",234, 288),      p("dining_chair",262, 288),      p("dining_chair",290, 288),
   ],
-  stools: [
-    p("bar_stool",   224, 318), p("bar_stool", 251, 318), p("bar_stool", 278, 318),
-  ],
   balcony: [
     p("out_coffee",  250, 36),
     p("out_chair",   210, 36,  90),
@@ -272,10 +272,11 @@ const C = {
     p("dining_chair",210, 258, 90),  p("dining_chair",306, 258, -90),
   ],
   roof: [
-    // office command position: back to the bulkhead wall, FACING the open terrace/view
-    p("desk",        312, 280),
-    p("office_chair",312, 302),
-    p("bookshelf",   360, 306),
+    // office INSIDE the enclosed roof landing (the stair-bulkhead room), tucked into
+    // the NE corner against the window — sheltered & climate-controlled, not exposed
+    p("desk",        386, 334),         // along the north wall, east of the stair
+    p("office_chair",386, 370),         // facing the desk / the water-tower view
+    p("bookshelf",   402, 420, 90),     // slim shelving down the east wall
     // lounge conversation (NW)
     p("rug_round",   150, 150),
     p("dining_round",150, 150),
@@ -298,7 +299,7 @@ const C = {
 
 /* =================== PRESETS =================== */
 const oneBed = (living, dining=C.dining) =>
-  [ ...C.bedroom, ...C.wic, ...living, ...dining, ...C.stools, ...C.balcony ];
+  [ ...C.bedroom, ...C.wic, ...living, ...dining, ...C.balcony ];
 
 window.PRESETS = {
   suggested: {
