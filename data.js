@@ -2,10 +2,10 @@
    500 Waverly Ave — Penthouse 4  ·  Floor plan + furniture data
    ----------------------------------------------------------------------------
    ALL UNITS ARE INCHES. Origin top-left, x→east, y→south (north is up).
-   Geometry traced from the published listing floor plan. Labeled room
-   dimensions are taken straight from the plan; the surrounding wall geometry
-   is a close approximation — fine-tune the numbers here against your tape
-   measure once you have the keys.
+   Geometry traced from the published listing floor plan — the angled west
+   wall, the diagonal stair wall, the balcony, and the bath/closet cluster all
+   mirror the real unit. Labeled room dimensions come straight from the plan.
+   Fine-tune any number here against your tape measure once you have the keys.
    ============================================================================ */
 
 const p = (type, x, y, rot = 0) => ({ type, x, y, rot });   // center x,y in inches
@@ -16,57 +16,59 @@ window.FLOORPLAN = {
   main: {
     label: "Main Level",
     areas: [
-      { kind: "indoor",  poly: [[40,60],[470,60],[470,398],[150,398],[20,300]],
-        label: "Living / Dining", dim: "25'2\" × 17'6\"", lx: 165, ly: 155 },
-      { kind: "outdoor", poly: [[130,0],[426,0],[426,60],[130,60]],
-        label: "Balcony", dim: "24'8\" × 5'0\"", lx: 278, ly: 24 },
+      { kind: "indoor",  poly: [[58,64],[470,64],[470,398],[150,398],[18,300],[40,150]],
+        label: "Living / Dining", dim: "25'2\" × 17'6\"", lx: 160, ly: 150 },
+      { kind: "outdoor", poly: [[130,4],[426,4],[426,64],[130,64]],
+        label: "Balcony", dim: "24'8\" × 5'0\"", lx: 278, ly: 26 },
     ],
     walls: [
       // primary bedroom box
-      [330,60,330,192],[330,192,470,192],
-      // bedroom closet (CL)
-      [405,192,405,225],
-      // en-suite bath
-      [346,225,470,225],[346,225,346,330],[346,330,470,330],
+      [322,64,322,196],[322,196,470,196],
+      // the angled wall by the stairs (faces the living room)
+      [322,196,300,210],
       // WIC
-      [300,210,346,210],[300,210,300,330],[300,330,346,330],
+      [300,210,300,330],[300,210,346,210],[300,330,346,330],
+      // bedroom closet (CL)
+      [405,196,405,228],[405,228,470,228],
+      // en-suite bath
+      [346,228,470,228],[346,228,346,330],[346,330,470,330],
       // stair shaft
-      [252,300,252,392],[252,300,300,300],
+      [250,300,250,392],[250,300,300,300],
       // kitchen
-      [150,300,252,300],[150,300,150,398],
+      [150,300,250,300],[150,300,150,398],
       // west service block: guest bath + W/D + CL
-      [150,210,150,300],[40,210,150,210],[40,300,150,300],[95,300,95,398],
+      [150,150,150,398],[40,250,150,250],[95,250,95,398],
     ],
     windows: [
-      [150,60,300,60],   // living glass / balcony doors
-      [330,60,420,60],   // bedroom glass / balcony door
+      [130,64,300,64],   // living glass / balcony doors
+      [322,64,420,64],   // bedroom glass / balcony door
     ],
     doors: [
       { x:150, y:398, r:34, a0:180, a1:270 },  // entry
-      { x:330, y:115, r:30, a0:0,   a1:90  },  // bedroom
+      { x:322, y:110, r:28, a0:0,   a1:90  },  // bedroom
     ],
     fixtures: [
-      { kind:"stairs",   x:252, y:300, w:48,  h:92, dir:"up", label:"UP" },
-      { kind:"island",   x:168, y:312, w:86,  h:40 },
-      { kind:"counter",  x:150, y:380, w:102, h:18 },
-      { kind:"appliance",x:152, y:381, w:24,  h:16, label:"R" },
-      { kind:"appliance",x:226, y:381, w:24,  h:16, label:"MW" },
-      { kind:"tub",      x:42,  y:214, w:52,  h:30 },
-      { kind:"wd",       x:48,  y:330, w:42,  h:42, label:"W/D" },
-      { kind:"shower",   x:426, y:282, w:42,  h:46 },
-      { kind:"toilet",   x:360, y:300 },
-      { kind:"vanity",   x:346, y:236, w:60,  h:16 },
+      { kind:"stairs",   x:250, y:300, w:50,  h:92, dir:"up", label:"UP" },
+      { kind:"island",   x:160, y:312, w:78,  h:38 },
+      { kind:"counter",  x:150, y:380, w:100, h:18 },
+      { kind:"appliance",x:150, y:381, w:24,  h:16, label:"R" },
+      { kind:"appliance",x:224, y:381, w:24,  h:16, label:"MW" },
+      { kind:"tub",      x:44,  y:156, w:52,  h:30 },
+      { kind:"wd",       x:50,  y:320, w:42,  h:42, label:"W/D" },
+      { kind:"shower",   x:428, y:282, w:40,  h:46 },
+      { kind:"toilet",   x:368, y:300 },
+      { kind:"vanity",   x:348, y:238, w:60,  h:16 },
     ],
     labels: [
-      { text:"Primary Bedroom", sub:"11'8\" × 11'0\"", x:400, y:118 },
-      { text:"Kitchen",         sub:"9'10\" × 8'2\"",  x:200, y:340 },
-      { text:"WIC",             sub:"",                x:322, y:270 },
-      { text:"CL",              sub:"",                x:437, y:208 },
-      { text:"Bath",            sub:"",                x:408, y:255 },
-      { text:"Bath",            sub:"",                x:115, y:255 },
+      { text:"Primary Bedroom", sub:"11'8\" × 11'0\"", x:396, y:118 },
+      { text:"Kitchen",         sub:"9'10\" × 8'2\"",  x:195, y:345 },
+      { text:"WIC",             sub:"",                x:322, y:272 },
+      { text:"CL",              sub:"",                x:437, y:212 },
+      { text:"Bath",            sub:"",                x:402, y:258 },
+      { text:"Bath",            sub:"",                x:95,  y:195 },
       { text:"W/D",             sub:"",                x:70,  y:355 },
       { text:"CL",              sub:"",                x:122, y:355 },
-      { text:"Entry",           sub:"",                x:100, y:330 },
+      { text:"Entry",           sub:"",                x:95,  y:305 },
     ],
   },
 
@@ -147,62 +149,118 @@ window.CATALOG = {
   planter:      { name:"Planter",          cat:"Decor",   w:22,  h:22,  fill:"#6b8e5a", render:"plant",   solid:false },
 };
 
-/* =================== DEFAULT (seed) LAYOUT =================== */
-window.DEFAULT_LAYOUT = {
-  main: [
-    /* bedroom */
-    p("rug_6x9",     400, 150),
-    p("bed_queen",   400, 150, 180),
-    p("nightstand",  356, 176, 180),
-    p("nightstand",  444, 176, 180),
+/* =================== LAYOUT BUILDING BLOCKS =================== */
+const C = {
+  bedroom: [
+    p("rug_6x9",     396, 150),
+    p("bed_queen",   396, 156, 180),
+    p("nightstand",  352, 178, 180),
+    p("nightstand",  440, 178, 180),
     p("dresser",     458, 100, 90),
-    /* WIC shelving */
-    p("wic_shelf",   314, 235, 90),
-    p("wic_shelf",   314, 290, 90),
-    /* living */
-    p("rug_8x10",    195, 150),
-    p("sectional",   175, 158, 180),
-    p("coffee_table",255, 150),
-    p("console_tv",  318, 150, 90),
-    p("armchair",    150,  92, -40),
-    p("bookshelf",   318,  88, 90),
-    p("bookshelf",   318, 205, 90),
-    p("bookshelf",    72,  68),
-    p("bookshelf",   110,  68),
-    p("plant",       300,  92),
-    /* dining */
-    p("rug_5x8",     205, 248),
-    p("dining6",     205, 248),
-    p("dining_chair",177, 228, 180), p("dining_chair",205, 228, 180), p("dining_chair",233, 228, 180),
-    p("dining_chair",177, 268),      p("dining_chair",205, 268),      p("dining_chair",233, 268),
-    /* island stools */
-    p("bar_stool",   150, 300), p("bar_stool", 175, 300), p("bar_stool", 200, 300),
-    /* balcony bistro */
-    p("out_coffee",  278, 30),
-    p("out_chair",   248, 30,  90),
-    p("out_chair",   308, 30, -90),
   ],
-
+  wic: [
+    p("wic_shelf",   322, 238, 90),
+    p("wic_shelf",   322, 295, 90),
+  ],
+  dining: [
+    p("rug_5x8",     195, 248),
+    p("dining6",     195, 248),
+    p("dining_chair",167, 228, 180), p("dining_chair",195, 228, 180), p("dining_chair",223, 228, 180),
+    p("dining_chair",167, 268),      p("dining_chair",195, 268),      p("dining_chair",223, 268),
+  ],
+  stools: [
+    p("bar_stool",   175, 300), p("bar_stool", 200, 300), p("bar_stool", 225, 300),
+  ],
+  balcony: [
+    p("out_coffee",  190, 30),
+    p("out_chair",   162, 30,  90),
+    p("out_chair",   218, 30, -90),
+  ],
+  livingSectional: [
+    p("rug_8x10",    205, 150),
+    p("sectional",   210, 150, 180),
+    p("coffee_table",288, 150),
+    p("console_tv",  314, 150, 90),
+    p("armchair",    110, 110, -30),
+    p("bookshelf",   314, 100, 90),
+    p("bookshelf",    80,  72),
+    p("bookshelf",   116,  72),
+    p("plant",       300, 182),
+  ],
+  livingTwoSofa: [
+    p("rug_8x10",    200, 150),
+    p("sofa3",       170, 115),
+    p("loveseat",    255, 160, -90),
+    p("coffee_table",200, 150),
+    p("armchair",    110, 160, 20),
+    p("console_tv",  314, 150, 90),
+    p("bookshelf",   314, 100, 90),
+    p("bookshelf",    80,  72),
+    p("bookshelf",   116,  72),
+    p("plant",       300, 182),
+  ],
+  guestRoom2BR: [
+    p("rug_6x9",     205, 116),
+    p("bed_queen",   205, 118),
+    p("nightstand",  165, 80),
+    p("nightstand",  245, 80),
+    p("dresser",     292, 150, 90),
+    p("wardrobe",    170, 168),
+    p("wardrobe",    218, 168),
+  ],
+  livingReduced2BR: [
+    p("loveseat",    250, 215, 180),
+    p("armchair",    300, 255, -35),
+    p("coffee_table",250, 250),
+    p("console_tv",  314, 230, 90),
+    p("plant",       300, 200),
+  ],
+  diningReduced2BR: [
+    p("rug_round",   185, 295),
+    p("dining_round",185, 295),
+    p("dining_chair",185, 268, 180), p("dining_chair",157, 295, 90), p("dining_chair",213, 295, -90),
+  ],
   roof: [
-    /* landing office */
     p("desk",        200, 380, 90),
     p("office_chair",236, 380),
     p("bookshelf",   175, 360),
-    /* lounge seating */
     p("rug_round",   150, 150),
     p("dining_round",150, 150),
     p("out_chair",   108, 150,  90), p("out_chair", 192, 150, -90),
     p("out_chair",   150, 108, 180), p("out_chair", 150, 192),
-    /* loungers */
     p("out_lounge",  235, 250, 22),
     p("out_lounge",  300, 268, 22),
-    /* dining */
     p("out_dining",  360, 150),
     p("out_chair",   322, 138,  90), p("out_chair", 398, 138, -90),
     p("out_chair",   360, 110, 180), p("out_chair", 360, 190),
-    /* grill + greenery */
     p("grill",       398, 300),
     p("plant",        60, 300),
     p("planter",     420, 320),
   ],
 };
+
+/* =================== PRESETS =================== */
+window.PRESETS = {
+  suggested: {
+    name: "Sectional",
+    desc: "Open 1-bed — big L-sectional, TV wall, books, dining for 6.",
+    main: [ ...C.bedroom, ...C.wic, ...C.livingSectional, ...C.dining, ...C.stools, ...C.balcony ],
+    roof: [ ...C.roof ],
+  },
+  twoSofa: {
+    name: "Two Sofas",
+    desc: "Open 1-bed — sofa + loveseat; easier to rearrange for parties.",
+    main: [ ...C.bedroom, ...C.wic, ...C.livingTwoSofa, ...C.dining, ...C.stools, ...C.balcony ],
+    roof: [ ...C.roof ],
+  },
+  twoBed: {
+    name: "Convert-back 2-Bed",
+    desc: "Second bedroom carved from the living room (the original 2BR config).",
+    main: [ ...C.bedroom, ...C.wic, ...C.guestRoom2BR, ...C.livingReduced2BR, ...C.diningReduced2BR, ...C.stools, ...C.balcony ],
+    roof: [ ...C.roof ],
+  },
+};
+window.PRESET_ORDER = ["suggested", "twoSofa", "twoBed"];
+
+/* the seed layout used on first load / reset */
+window.DEFAULT_LAYOUT = { main: window.PRESETS.suggested.main, roof: window.PRESETS.suggested.roof };

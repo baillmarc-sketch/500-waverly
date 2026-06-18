@@ -27,7 +27,14 @@ HTML/CSS/JS with no dependencies.
   2" grid), use the rotate knob or the toolbar. Pieces glow red if they overlap.
 - **Furniture catalog** — tap **＋ Add furniture** (or the right panel on desktop) to drop in
   beds, sofas, a sectional, dining tables, desks, closet shelving, outdoor pieces, rugs, and more.
-- **Mobile + desktop** — pinch to zoom, drag to pan (wheel-zoom on desktop). Big touch targets.
+- **Live alignment guides** — drag a piece and it snaps to line up with others (pink guides),
+  so things sit square without fiddling. **Double-tap a piece to spin it 90°.**
+- **Starter layouts** — the **⌂ Layouts** menu swaps between *Sectional*, *Two Sofas*, and the
+  *Convert-back 2-Bed* (the original config, with a second bedroom carved from the living room).
+- **Share** — **🔗 Share** copies a link with your exact arrangement baked in; open it on another
+  device (or send it) to load that layout.
+- **Mobile + desktop** — pinch to zoom, drag to pan (wheel-zoom on desktop). Big touch targets,
+  north compass, drop-shadowed furniture.
 - **Auto-saves** to your browser. Export/Import your layout as JSON to share or back up.
 - **💡 Ideas** — built-in interior-design notes tailored to this unit and your needs
   (sectional vs. two sofas, dining for 6+, walk-in-closet build-out options, the roof office

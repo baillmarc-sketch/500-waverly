@@ -24,7 +24,9 @@
     </div>
 
     <div class="top-actions">
-      <button id="btn-suggestions" class="ghost" title="Decorator notes">💡 Ideas</button>
+      <button id="btn-presets" class="ghost wide" title="Starter layouts">⌂&nbsp;Layouts</button>
+      <button id="btn-suggestions" class="ghost wide" title="Decorator notes">💡&nbsp;Ideas</button>
+      <button id="btn-share" class="ghost wide" title="Copy a shareable link">🔗&nbsp;Share</button>
       <button id="btn-grid"   class="ghost" title="Toggle grid">▦</button>
       <button id="btn-dims"   class="ghost active" title="Toggle room dimensions">⌗ ft</button>
       <button id="btn-reset"  class="ghost" title="Reset to suggested layout">⟲</button>
@@ -33,6 +35,11 @@
       <input id="file-import" type="file" accept="application/json" hidden />
     </div>
   </header>
+
+  <!-- presets dropdown -->
+  <div id="presets-menu" class="menu" hidden></div>
+  <!-- transient toast -->
+  <div id="toast" class="toast" hidden></div>
 
   <!-- ===================== STAGE ===================== -->
   <main class="stage">

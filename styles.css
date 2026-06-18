@@ -61,7 +61,32 @@ button{ font-family:inherit; cursor:pointer; border:none; background:none; color
 }
 .ghost:hover{ background:#ffffff26; }
 .ghost.active{ background:var(--accent); color:#fff; }
+.ghost.wide{ width:auto; padding:0 12px; font-size:13px; font-weight:600; white-space:nowrap; }
 #btn-dims{ width:auto; padding:0 12px; font-size:13px; font-weight:600; }
+
+/* presets dropdown */
+.menu{
+  position:fixed; z-index:50; top:62px; right:14px;
+  background:var(--panel); border:1px solid var(--line); border-radius:14px;
+  box-shadow:var(--shadow); padding:6px; width:min(280px,calc(100vw - 28px));
+}
+.menu-item{
+  display:block; width:100%; text-align:left; padding:10px 12px; border-radius:10px;
+  transition:.12s;
+}
+.menu-item:hover{ background:var(--panel-2); }
+.menu-item.active{ background:var(--panel-2); }
+.menu-item strong{ display:block; font-size:13.5px; color:var(--ink); }
+.menu-item small{ display:block; font-size:11.5px; color:var(--ink-soft); margin-top:2px; line-height:1.35; }
+.menu-head{ font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.5px; padding:6px 12px 4px; }
+
+/* toast */
+.toast{
+  position:fixed; z-index:80; left:50%; bottom:calc(26px + var(--safe-b)); transform:translateX(-50%);
+  background:#332d27; color:#f3ece2; padding:11px 18px; border-radius:12px; font-size:13px; font-weight:600;
+  box-shadow:var(--shadow); animation:toastin .2s ease;
+}
+@keyframes toastin{ from{ opacity:0; transform:translate(-50%,8px);} to{ opacity:1; transform:translate(-50%,0);} }
 
 /* ---------------- STAGE ---------------- */
 .stage{ position:relative; flex:1; overflow:hidden; background:
@@ -174,7 +199,8 @@ button{ font-family:inherit; cursor:pointer; border:none; background:none; color
   .brand-text small{ display:none; }
   .floor-switch{ margin:0; }
   .fs-btn{ padding:7px 12px; font-size:12px; }
-  #btn-grid,#btn-import,#btn-export{ display:none; }    /* keep top bar tidy on phones */
+  #btn-grid,#btn-import,#btn-export,#btn-suggestions{ display:none; }  /* keep top bar tidy on phones */
+  .ghost.wide{ padding:0 9px; font-size:12px; }
   .add-fab{ display:block; }
 
   .catalog{

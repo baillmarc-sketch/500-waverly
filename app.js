@@ -21,8 +21,14 @@ const state = {
   showGrid: false,
   showDims: true,
   selected: null,         // item ref
+  guides: [],             // alignment guides shown while dragging
   layout: { main: [], roof: [] },
 };
+
+function toast(msg){
+  const t = $("#toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(()=> t.hidden = true, 1900);
+}
 
 const canvas = $("#plan");
 const ctx = canvas.getContext("2d");
@@ -205,11 +211,43 @@ function render(){
   for (const a of pl.areas) if (a.label) drawAreaLabel(a);
   for (const l of (pl.labels||[])) drawLabel(l);
 
+  // alignment guides (while dragging)
+  if (state.guides.length) drawGuides();
+
   // selection
   if (state.selected && arr.includes(state.selected)) drawSelection(state.selected);
 
   ctx.restore();
+  drawCompass();
   updateHud();
+}
+
+function drawGuides(){
+  const b = planBounds();
+  ctx.save();
+  ctx.strokeStyle = "#d4567e"; ctx.lineWidth = 1; ctx.setLineDash([5,4]);
+  for (const g of state.guides){
+    ctx.beginPath();
+    if (g.type==="v"){ ctx.moveTo(g.at, b.minY-30); ctx.lineTo(g.at, b.maxY+30); }
+    else { ctx.moveTo(b.minX-30, g.at); ctx.lineTo(b.maxX+30, g.at); }
+    ctx.stroke();
+  }
+  ctx.setLineDash([]); ctx.restore();
+}
+
+/* north compass, drawn in screen space */
+function drawCompass(){
+  const r = canvas.getBoundingClientRect();
+  const cx = r.width - 34, cy = 34, R = 17;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.fillStyle = "rgba(255,255,255,.78)"; ctx.beginPath(); ctx.arc(0,0,R,0,7); ctx.fill();
+  ctx.strokeStyle = "#b9ac98"; ctx.lineWidth = 1; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,-R+4); ctx.lineTo(4,1); ctx.lineTo(0,-2); ctx.lineTo(-4,1); ctx.closePath();
+  ctx.fillStyle = "#c08457"; ctx.fill();
+  ctx.fillStyle = "#5a5046"; ctx.font = "700 9px Inter, sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillText("N", 0, R-5);
+  ctx.restore();
 }
 
 function pathPoly(poly, openOk){
@@ -339,14 +377,18 @@ function drawFixture(f){
 /* ---- furniture ---- */
 function drawPiece(it){
   const c = cat(it.type); if (!c) return;
-  const sel = it === state.selected;
   const warn = overlaps(it);
   ctx.save();
   ctx.translate(it.x, it.y);
   ctx.rotate(it.rot*Math.PI/180);
   const w=c.w, h=c.h;
   ctx.lineJoin="round";
+  if (c.solid !== false){                       // soft drop shadow for real furniture
+    ctx.shadowColor = "rgba(50,38,24,.30)";
+    ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
+  }
   drawShape(ctx, c.render, w, h, c.fill, { warn });
+  ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   ctx.restore();
 
   // upright label
@@ -531,6 +573,7 @@ const pointers = new Map();
 let mode = null;            // 'drag' | 'rotate' | 'pan' | 'pinch'
 let dragDX=0, dragDY=0, panSX=0, panSY=0, moved=false, downOnEmpty=false;
 let pinch = null;
+let lastTapItem = null, lastTapTime = 0;
 
 function evPos(e){ const r=canvas.getBoundingClientRect(); return { x:e.clientX-r.left, y:e.clientY-r.top }; }
 
@@ -558,6 +601,10 @@ canvas.addEventListener("pointerdown", e=>{
   }
   const hit = topItemAt(w.x,w.y);
   if (hit){
+    const now = Date.now();
+    if (hit === lastTapItem && now - lastTapTime < 320){   // double-tap → rotate 90°
+      hit.rot = (hit.rot + 90) % 360; save(); lastTapTime = 0;
+    } else { lastTapItem = hit; lastTapTime = now; }
     select(hit);
     mode="drag"; dragDX=w.x-hit.x; dragDY=w.y-hit.y; downOnEmpty=false;
   } else {
@@ -585,8 +632,17 @@ canvas.addEventListener("pointermove", e=>{
 
   const w = toWorld(pos.x,pos.y);
   if (mode==="drag" && state.selected){
-    state.selected.x = Math.round((w.x-dragDX)/SNAP)*SNAP;
-    state.selected.y = Math.round((w.y-dragDY)/SNAP)*SNAP;
+    const sel = state.selected;
+    let nx = Math.round((w.x-dragDX)/SNAP)*SNAP;
+    let ny = Math.round((w.y-dragDY)/SNAP)*SNAP;
+    // snap-align centers to other pieces, show guides (4" threshold)
+    const g=[];
+    for (const o of items()){
+      if (o===sel || cat(o.type).solid===false) continue;
+      if (Math.abs(o.x-nx) <= 4){ nx=o.x; g.push({type:"v",at:o.x}); }
+      if (Math.abs(o.y-ny) <= 4){ ny=o.y; g.push({type:"h",at:o.y}); }
+    }
+    sel.x = nx; sel.y = ny; state.guides = g;
     render();
   } else if (mode==="rotate" && state.selected){
     let ang = Math.atan2(w.y-state.selected.y, w.x-state.selected.x)*180/Math.PI + 90;
@@ -601,6 +657,7 @@ canvas.addEventListener("pointermove", e=>{
 
 function endPointer(e){
   pointers.delete(e.pointerId);
+  if (state.guides.length){ state.guides=[]; render(); }
   if (mode==="drag" || mode==="rotate") save();
   if (mode==="pan" && downOnEmpty && !moved){ select(null); }
   if (pointers.size===0){ mode=null; pinch=null; downOnEmpty=false; }
@@ -782,8 +839,70 @@ function importLayout(file){
   fr.readAsText(file);
 }
 
+/* ---- presets ---- */
+function buildPresetsMenu(){
+  const menu = $("#presets-menu");
+  menu.innerHTML = `<div class="menu-head">Starter layouts</div>`;
+  for (const id of window.PRESET_ORDER){
+    const pr = window.PRESETS[id];
+    const b = document.createElement("button");
+    b.className = "menu-item";
+    b.innerHTML = `<strong>${pr.name}</strong><small>${pr.desc}</small>`;
+    b.addEventListener("click", ()=>{
+      if (confirm(`Load the "${pr.name}" starter layout? This replaces your current arrangement on both floors.`)){
+        loadPreset(id);
+      }
+      menu.hidden = true;
+    });
+    menu.appendChild(b);
+  }
+}
+function loadPreset(id){
+  const pr = window.PRESETS[id];
+  state.layout = {
+    main: pr.main.map(d=>({ ...d, _id:uid++ })),
+    roof: pr.roof.map(d=>({ ...d, _id:uid++ })),
+  };
+  state.selected = null; save(); render();
+  toast(`Loaded "${pr.name}" layout`);
+}
+
+/* ---- shareable link (layout encoded in URL hash) ---- */
+function encodeLayout(){
+  const enc = fl => state.layout[fl].map(it=>[it.type, it.x, it.y, it.rot]);
+  const json = JSON.stringify({ m:enc("main"), r:enc("roof") });
+  return btoa(unescape(encodeURIComponent(json)));
+}
+function applyEncoded(str){
+  const o = JSON.parse(decodeURIComponent(escape(atob(str))));
+  const dec = a => (a||[]).map(t=>({ type:t[0], x:t[1], y:t[2], rot:t[3], _id:uid++ }));
+  state.layout = { main: dec(o.m), roof: dec(o.r) };
+}
+function doShare(){
+  const url = location.origin + location.pathname + "#l=" + encodeLayout();
+  history.replaceState(null, "", url);
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(
+      ()=> toast("Link copied — paste to share your layout"),
+      ()=> prompt("Copy your shareable layout link:", url)
+    );
+  } else {
+    prompt("Copy your shareable layout link:", url);
+  }
+}
+
 function wire(){
   $$(".fs-btn").forEach(b=> b.addEventListener("click",()=>switchFloor(b.dataset.floor)));
+
+  $("#btn-presets").addEventListener("click", e=>{
+    e.stopPropagation();
+    const m=$("#presets-menu"); m.hidden=!m.hidden;
+  });
+  $("#btn-share").addEventListener("click", doShare);
+  document.addEventListener("click", e=>{
+    const m=$("#presets-menu");
+    if (!m.hidden && !m.contains(e.target) && e.target.id!=="btn-presets") m.hidden=true;
+  });
 
   $("#btn-grid").addEventListener("click", e=>{ state.showGrid=!state.showGrid; e.currentTarget.classList.toggle("active",state.showGrid); render(); });
   $("#btn-dims").addEventListener("click", e=>{ state.showDims=!state.showDims; e.currentTarget.classList.toggle("active",state.showDims); render(); });
@@ -830,8 +949,13 @@ function wire(){
    BOOT
    ====================================================================== */
 function init(){
-  if (!load()) state.layout = cloneDefault();
+  let loaded = false;
+  if (location.hash.startsWith("#l=")){
+    try { applyEncoded(location.hash.slice(3)); loaded = true; } catch(e){ /* fall through */ }
+  }
+  if (!loaded && !load()) state.layout = cloneDefault();
   buildCatalog();
+  buildPresetsMenu();
   wire();
   $("#cat-floor-name").textContent = window.FLOORPLAN[state.floor].label;
   resize();
