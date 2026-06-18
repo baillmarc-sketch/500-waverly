@@ -9,7 +9,7 @@ const $  = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
 /* ---------------- state ---------------- */
-const STORE_KEY = "waverly-ph4-layout-v1";
+const STORE_KEY = "waverly-ph4-layout-v2";   // bump to discard stale layouts after geometry changes
 const SNAP = 2;            // position snap, inches
 const ROT_SNAP = 15;      // rotation snap, degrees
 const WALL = 5;           // wall thickness, inches
