@@ -151,7 +151,9 @@ window.CATALOG = {
 
   /* Office / Storage */
   desk:         { name:"Desk",             cat:"Office",  w:48,  h:24,  fill:"#9c7b57", render:"box" },
+  desk_compact: { name:"Compact Desk",     cat:"Office",  w:42,  h:20,  fill:"#9c7b57", render:"box" },
   office_chair: { name:"Rolling Chair",    cat:"Office",  w:24,  h:24,  fill:"#3f4756", render:"round" },
+  task_chair:   { name:"Task Chair (Aeron)",cat:"Office", w:27,  h:27,  fill:"#3f4756", render:"round" },
   wic_shelf:    { name:"Closet Shelving",  cat:"Storage", w:30,  h:14,  fill:"#b8a88f", render:"shelf" },
   wic_island:   { name:"Closet Island",    cat:"Storage", w:40,  h:22,  fill:"#bba98c", render:"drawers" },
 
@@ -274,8 +276,8 @@ const C = {
   roof: [
     // office INSIDE the enclosed roof landing (the stair-bulkhead room), tucked into
     // the NE corner against the window — sheltered & climate-controlled, not exposed
-    p("desk",        386, 334),         // along the north wall, east of the stair
-    p("office_chair",386, 370),         // facing the desk / the water-tower view
+    p("desk_compact",386, 332),         // 42"×20" — fits the ~48" landing bay with margin
+    p("task_chair",  386, 366),         // Aeron-sized; tucks under, base sits ~14" proud
     p("bookshelf",   402, 420, 90),     // slim shelving down the east wall
     // lounge conversation (NW)
     p("rug_round",   150, 150),
