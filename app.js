@@ -1035,6 +1035,27 @@ function buildPresetsMenu(){
     menu.appendChild(b);
   }
 }
+function buildMoreMenu(){
+  const menu = $("#more-menu");
+  const items = [
+    ["⌂","Layouts",            ()=>{ $("#more-menu").hidden=true; $("#presets-menu").hidden=false; }],
+    ["💡","Decorator ideas",    ()=>$("#btn-suggestions").click()],
+    ["🔗","Share link",         ()=>$("#btn-share").click()],
+    ["📏","Measure",            ()=>$("#btn-measure").click()],
+    ["⟲","Reset to Feng Shui",  ()=>$("#btn-reset").click()],
+    ["▦","Toggle grid",         ()=>$("#btn-grid").click()],
+    ["⌗","Toggle dimensions",   ()=>$("#btn-dims").click()],
+    ["↥","Export layout",       ()=>$("#btn-export").click()],
+    ["↧","Import layout",       ()=>$("#btn-import").click()],
+  ];
+  menu.innerHTML = `<div class="menu-head">Tools</div>`;
+  for (const [ico,label,fn] of items){
+    const b = document.createElement("button"); b.className = "menu-item mrow";
+    b.innerHTML = `<span class="mi-ico">${ico}</span><span>${label}</span>`;
+    b.addEventListener("click", ()=>{ menu.hidden = true; fn(); });
+    menu.appendChild(b);
+  }
+}
 function loadPreset(id){
   const pr = window.PRESETS[id];
   state.layout = {
@@ -1082,6 +1103,14 @@ function wire(){
     const m=$("#presets-menu"); m.hidden=!m.hidden;
   });
   $("#btn-share").addEventListener("click", doShare);
+  $("#btn-more").addEventListener("click", e=>{
+    e.stopPropagation();
+    const m=$("#more-menu"); const show=m.hidden; $("#presets-menu").hidden=true; m.hidden=!show;
+  });
+  document.addEventListener("click", e=>{
+    const m=$("#more-menu");
+    if (!m.hidden && !m.contains(e.target) && e.target.id!=="btn-more") m.hidden=true;
+  });
   $("#btn-measure").addEventListener("click", e=>{
     state.measuring = !state.measuring;
     e.currentTarget.classList.toggle("active", state.measuring);
@@ -1152,6 +1181,7 @@ function init(){
   if (!loaded && !load()) state.layout = cloneDefault();
   buildCatalog();
   buildPresetsMenu();
+  buildMoreMenu();
   buildSwatches();
   wire();
   $("#cat-floor-name").textContent = window.FLOORPLAN[state.floor].label;

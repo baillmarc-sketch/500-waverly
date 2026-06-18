@@ -19,8 +19,8 @@
     </div>
 
     <div class="floor-switch" role="tablist" aria-label="Floor">
-      <button class="fs-btn active" data-floor="main" role="tab">Main Level</button>
-      <button class="fs-btn" data-floor="roof" role="tab">Roof Deck</button>
+      <button class="fs-btn active" data-floor="main" role="tab">Main</button>
+      <button class="fs-btn" data-floor="roof" role="tab">Roof</button>
     </div>
 
     <div class="top-actions">
@@ -33,12 +33,15 @@
       <button id="btn-reset"  class="ghost wide" title="Reset to the Feng Shui layout">⟲&nbsp;Reset</button>
       <button id="btn-export" class="ghost" title="Export layout">↥</button>
       <button id="btn-import" class="ghost" title="Import layout">↧</button>
+      <button id="btn-more"   class="ghost" title="More" aria-label="More options">⋯</button>
       <input id="file-import" type="file" accept="application/json" hidden />
     </div>
   </header>
 
   <!-- presets dropdown -->
   <div id="presets-menu" class="menu" hidden></div>
+  <!-- mobile overflow menu -->
+  <div id="more-menu" class="menu" hidden></div>
   <!-- transient toast -->
   <div id="toast" class="toast" hidden></div>
 
