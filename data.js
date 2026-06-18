@@ -154,6 +154,8 @@ window.CATALOG = {
   desk_compact: { name:"Compact Desk",     cat:"Office",  w:42,  h:20,  fill:"#9c7b57", render:"box" },
   office_chair: { name:"Rolling Chair",    cat:"Office",  w:24,  h:24,  fill:"#3f4756", render:"round" },
   task_chair:   { name:"Task Chair (Aeron)",cat:"Office", w:27,  h:27,  fill:"#3f4756", render:"round" },
+  monitor:      { name:"Monitor",          cat:"Office",  w:20,  h:8,   fill:"#2f3540", render:"box", solid:false },
+  file_cabinet: { name:"File Cabinet",     cat:"Office",  w:16,  h:18,  fill:"#6b7280", render:"drawers" },
   wic_shelf:    { name:"Closet Shelving",  cat:"Storage", w:30,  h:14,  fill:"#b8a88f", render:"shelf" },
   wic_island:   { name:"Closet Island",    cat:"Storage", w:40,  h:22,  fill:"#bba98c", render:"drawers" },
 
@@ -277,7 +279,9 @@ const C = {
     // office INSIDE the enclosed roof landing (the stair-bulkhead room), tucked into
     // the NE corner against the window — sheltered & climate-controlled, not exposed
     p("desk_compact",386, 332),         // 42"×20" — fits the ~48" landing bay with margin
+    p("monitor",     386, 328),         // on the desk, against the north wall/window
     p("task_chair",  386, 366),         // Aeron-sized; tucks under, base sits ~14" proud
+    p("file_cabinet",398, 392),         // mobile pedestal down the east wall
     p("bookshelf",   402, 420, 90),     // slim shelving down the east wall
     // lounge conversation (NW)
     p("rug_round",   150, 150),
