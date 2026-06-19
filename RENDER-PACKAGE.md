@@ -77,6 +77,31 @@ Run each in **Version A** (keep navy + blush) and **Version B** (warm the walls)
 - **B:** "…same, but walls in warm **clay/plaster** with a deep **forest-green or bronze-olive**
   headboard wall; optional brass sconces. Keep the walnut bed and corner windows."
 
+### Roof terrace *(outdoor — run Day vs. Golden-hour instead of A/B)*
+Use the **roof floor-plan PNG** as the proportion/layout reference (no interior base photo needed).
+- **Day:** "Photorealistic rooftop terrace on a Brooklyn penthouse (~33×25 ft): concrete pavers,
+  glass-and-steel parapet railings, a low stair-bulkhead structure, and a water-tower + low-rise
+  skyline view. Furnish to the warm-modern mood board: a low **teak + oatmeal-cushion** outdoor
+  sectional around a concrete coffee table (lounge zone), a round **teak dining table for 6** with
+  woven chairs under a market umbrella, a grill station by the bulkhead, and tall **wood planters**
+  with ornamental grasses and evergreens; an outdoor rug warming the pavers. Bright midday sun,
+  soft shadows. 24mm, eye-level, straight verticals, editorial, natural materials. *Avoid: clutter,
+  glossy CGI, fisheye, people, text.*"
+- **Golden-hour / evening:** "…same terrace and layout, but at golden hour fading to dusk: warm
+  low sun, **string lights** along the parapet, candles and a lantern on the dining table set for a
+  dinner party, skyline lights coming on. Cozy, cinematic, late-summer-evening mood."
+
+### Entry / bar vignette *(interior detail shot)*
+A close vignette that sells the "dinner-party" story — run **A** (as-is) and **B** (warmed wall).
+- **A:** "Photorealistic interior vignette of an entry **bar moment** in a warm modern apartment:
+  a low **walnut credenza** styled as a home bar — decanters, amber glassware on a **brass tray**,
+  an ice bucket, a stack of art books, a small **mushroom-shade lamp** — with a large piece of
+  gallery art or a round **aged-brass mirror** above, a faded runner rug below, white-oak floors,
+  and the existing **blush/navy** wall behind. Soft warm evening light. 35mm, straight verticals,
+  editorial, shallow depth of field on the styling. *Avoid: clutter, glossy CGI, text, people.*"
+- **B:** "…same bar vignette, but the wall behind warmed to **clay/plaster** or deep
+  **bronze-olive**, with aged-brass and tobacco-leather accents. Warm lamplight."
+
 ## 4. No good base photo? From-scratch prompt
 Drop "use image 1 as the room," keep the mood board attached, and prepend the room's size +
 key features from §5, e.g.: *"Generate a photorealistic ~9'10"×8'2" kitchen with a walnut
