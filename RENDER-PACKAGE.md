@@ -102,6 +102,56 @@ A close vignette that sells the "dinner-party" story — run **A** (as-is) and *
 - **B:** "…same bar vignette, but the wall behind warmed to **clay/plaster** or deep
   **bronze-olive**, with aged-brass and tobacco-leather accents. Warm lamplight."
 
+### Roof-landing office (top of the stairs)
+The enclosed stair-bulkhead room — dark large-format floor tile, one window with a
+**water-tower / Brooklyn view** (use that photo as the base if you have it).
+- **A:** "Use image 1 as the exact small room (keep the window + view, dark tile floor, walls,
+  proportions, camera). Make it a tidy WFH nook to the mood board: a compact **walnut desk** under
+  the window facing the view, a black **Herman Miller-style task chair**, a monitor, a slim
+  **bookshelf** and a small file cabinet along the side wall, a desk lamp, a framed print, one
+  plant. Sheltered, warm, uncluttered. Soft daylight from the window."
+- **B:** "…same nook, walls warmed to **clay/plaster** or soft olive, a wood-tone shelf, brass
+  desk lamp; cozy late-afternoon light."
+
+### Bedroom + small desk & monitor (the "Bedroom Office" layout)
+- **A:** "Use image 1 as the exact bedroom (keep corner windows, oak floor, proportions, blush
+  wall, camera). Style to the board: a low **walnut platform bed** in command position on the
+  solid wall with dark-wood nightstands and mushroom lamps; PLUS a **compact walnut desk under the
+  corner window** with a monitor and a black task chair, and a low dresser on the opposite wall.
+  Keep it calm and warm — the desk reads as a small, tidy workspace, not an office. Soft morning
+  light."
+- **B:** "…same, walls in warm **clay/plaster** with a deep **forest-green or bronze-olive**
+  headboard wall; brass accents. Keep the walnut bed, corner windows, and the desk."
+
+### More views you might like (based on the board)
+Single prompts — add "use image 1 as the room" if you have a matching base photo, otherwise let
+them generate from the mood board + the dimensions in §5.
+- **Reading nook + book wall:** "A cozy reading corner against a full wall of warm wood
+  **bookshelves** (String/built-in style) packed with books as the 'art'; a **sculptural bouclé
+  lounge chair** + ottoman, an arc or **mushroom floor lamp**, a small side table with a coffee
+  cup, a faded rug, oak floors. Soft warm afternoon light. Editorial, natural materials."
+- **Music / listening corner:** "A late-night **listening corner**: a low **walnut credenza** with
+  a turntable, vinyl records, and a pair of bookshelf speakers; a comfortable leather lounge chair,
+  a small brass floor lamp, framed gallery art above, a tumbler of whiskey on a side table. Warm
+  dim lamplight, charcoal wall, intimate mood. Editorial."
+- **Walk-in closet (built-out):** "A boutique **walk-in closet**: warm wood **double-hang** rails
+  both sides, a **center island with drawers** and a stone top, open shelving for folded clothes
+  and shoes, a full-length mirror, a single brass **sconce**, a small bench. Calm, organized,
+  warm-modern. Soft even light."
+- **Dinner party at night (close):** "A warm **candlelit dinner-party** scene at a round **walnut
+  pedestal table** set for 6: linen napkins, ceramic plates, **taper candles**, wine glasses, a low
+  floral arrangement, mixed modern chairs; the city glowing in the corner windows behind. Cozy,
+  cinematic, golden candlelight. Editorial, shallow depth of field. *(Add 'guests seated, relaxed'
+  if you want people.)*"
+- **En-suite bath (warm modern):** "A small **warm-modern bathroom**: a **walnut vanity** with a
+  stone top and an undermount basin, **aged-brass** fixtures, a large frameless mirror, a walk-in
+  shower with large-format stone tile, a sconce, a stack of folded towels, one plant. Soft daylight.
+  Editorial, natural materials, no clutter."
+- **Balcony coffee for two:** "The narrow **balcony** (~5 ft deep) at morning: a small round
+  **bistro café table** with two chairs, a coffee cup and a book, a cluster of **potted plants**
+  massed in the corner, the city low-rise view beyond the railing. Warm soft morning light, fresh
+  and simple. Editorial."
+
 ## 4. No good base photo? From-scratch prompt
 Drop "use image 1 as the room," keep the mood board attached, and prepend the room's size +
 key features from §5, e.g.: *"Generate a photorealistic ~9'10"×8'2" kitchen with a walnut
