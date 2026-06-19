@@ -71,7 +71,7 @@ function undo(){
 }
 
 const canvas = $("#plan");
-const ctx = canvas.getContext("2d");
+let ctx = canvas.getContext("2d");
 let dpr = Math.max(1, window.devicePixelRatio || 1);
 let uid = 1;
 
@@ -260,6 +260,28 @@ function render(){
 
   const pl = plan();
 
+  drawWorld(pl);
+
+  // alignment guides (while dragging)
+  if (state.guides.length) drawGuides();
+
+  // measure line
+  if (state.meas) drawMeasure();
+
+  // selection
+  if (state.selected && items().includes(state.selected)) drawSelection(state.selected);
+
+  ctx.restore();
+  drawHandle();
+  drawCompass();
+  drawRotBadge();
+  if (state.meas) drawMeasureLabel();
+  updateHud();
+}
+
+/* Static plan content (no interaction overlays) — shared by the on-screen render
+   and the PNG export so both stay pixel-identical. Caller sets the transform. */
+function drawWorld(pl){
   // soft drop shadow under the floor plate
   ctx.save();
   ctx.shadowColor = "rgba(60,45,30,.28)";
@@ -315,22 +337,45 @@ function render(){
   // labels (upright, scaled with plan)
   for (const a of pl.areas) if (a.label) drawAreaLabel(a);
   for (const l of (pl.labels||[])) drawLabel(l);
+}
 
-  // alignment guides (while dragging)
-  if (state.guides.length) drawGuides();
+/* Export the CURRENT floor as a clean, high-res PNG (no selection/measure/grid
+   overlays, no overlap highlights) — for sharing or handing to a render tool. */
+function exportPNG(){
+  const b = planBounds();
+  const pad = 70;                                   // output-px margin around the plan
+  const scale = 2200 / Math.max(b.w, b.h);          // long edge ≈ 2200px
+  const W = Math.round(b.w*scale + pad*2);
+  const H = Math.round(b.h*scale + pad*2);
+  const off = document.createElement("canvas");
+  off.width = W; off.height = H;
+  const octx = off.getContext("2d");
+  octx.fillStyle = "#fbf6ec"; octx.fillRect(0,0,W,H);   // warm paper background
 
-  // measure line
-  if (state.meas) drawMeasure();
+  // redirect drawing to the off-screen canvas with a clean transform
+  const _ctx=ctx, _s=state.scale, _px=state.panX, _py=state.panY, _dpr=dpr;
+  const _ov=_overlapSet, _grid=state.showGrid;
+  ctx = octx; dpr = 1; _overlapSet = new Set(); state.showGrid = false;
+  state.scale = scale; state.panX = pad - b.minX*scale; state.panY = pad - b.minY*scale;
+  octx.setTransform(1,0,0,1,0,0);
+  octx.save(); octx.translate(state.panX, state.panY); octx.scale(scale, scale);
+  try { drawWorld(plan()); } finally {
+    octx.restore();
+    ctx=_ctx; dpr=_dpr; state.scale=_s; state.panX=_px; state.panY=_py;
+    _overlapSet=_ov; state.showGrid=_grid;
+    render();                                         // repaint the live canvas
+  }
 
-  // selection
-  if (state.selected && arr.includes(state.selected)) drawSelection(state.selected);
-
-  ctx.restore();
-  drawHandle();
-  drawCompass();
-  drawRotBadge();
-  if (state.meas) drawMeasureLabel();
-  updateHud();
+  const name = `500-waverly-${state.floor}-floorplan.png`;
+  off.toBlob(blob => {
+    if (!blob){ toast("Couldn't export — try again"); return; }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    toast(`${plan().label} floor plan saved as PNG`);
+  }, "image/png");
 }
 
 /* measure tool: dashed line + endpoint dots, drawn in the world transform */
@@ -1139,6 +1184,7 @@ function buildMoreMenu(){
     ["⟲","Reset to Feng Shui",  ()=>$("#btn-reset").click()],
     ["▦","Toggle grid",         ()=>$("#btn-grid").click()],
     ["⌗","Toggle dimensions",   ()=>$("#btn-dims").click()],
+    ["🖼","Download PNG",        ()=>$("#btn-png").click()],
     ["↥","Export layout",       ()=>$("#btn-export").click()],
     ["↧","Import layout",       ()=>$("#btn-import").click()],
     ["?","How it works",        ()=>$("#btn-help").click()],
@@ -1225,6 +1271,7 @@ function wire(){
   $("#btn-grid").addEventListener("click", e=>{ state.showGrid=!state.showGrid; e.currentTarget.classList.toggle("active",state.showGrid); render(); });
   $("#btn-dims").addEventListener("click", e=>{ state.showDims=!state.showDims; e.currentTarget.classList.toggle("active",state.showDims); render(); });
   $("#btn-reset").addEventListener("click", ()=> loadPreset("suggested"));  // undoable via the toast
+  $("#btn-png").addEventListener("click", exportPNG);
   $("#btn-export").addEventListener("click", exportLayout);
   $("#btn-import").addEventListener("click", ()=> $("#file-import").click());
   $("#file-import").addEventListener("change", e=>{ if(e.target.files[0]) importLayout(e.target.files[0]); e.target.value=""; });

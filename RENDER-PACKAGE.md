@@ -22,8 +22,8 @@ images to attach, the master prompt, and per-room prompts. Optimized for the
    - Living/Dining → the corner-glass wide shot.
    - Bedroom → your best bedroom photo (or skip base and go from-scratch using §4).
 2. **Style reference** → the **mood board** image (every render).
-3. *(Optional)* a **floor-plan screenshot** from the live planner for proportions —
-   open the planner, fit the view, screenshot each level.
+3. *(Optional)* a **floor-plan PNG** for proportions — in the planner, hit the **🖼 Download PNG**
+   button (toolbar, or the ⋯ More menu) once per level (Main + Roof) and attach them.
 
 > Tip: attach the **base photo first, mood board second**, then paste the prompt.
 > In Nano Banana you can literally say "use image 1 as the room, image 2 as the style."
