@@ -19,7 +19,7 @@ window.FLOORPLAN = {
     // origin offset (40,70); north wall y=70, south ~y=417, east wall x=509.
     areas: [
       { kind: "indoor",  poly: [[40,70],[509,70],[509,340],[416,340],[416,417],[200,430],[40,265]],
-        label: "Living / Dining", dim: "25'2\" × 17'6\"", lx: 215, ly: 150 },
+        label: "Living / Dining", dim: "24'11\" × 15'9\"", lx: 215, ly: 150 },
       { kind: "outdoor", poly: [[193,4],[489,4],[489,70],[193,70]],
         label: "Balcony", dim: "24'8\" × 5'0\"", lx: 360, ly: 30 },
     ],
@@ -81,7 +81,7 @@ window.FLOORPLAN = {
       { kind:"toilet",   x:487, y:300 },
     ],
     labels: [
-      { text:"Primary Bedroom", sub:"11'8\" × 11'0\"", x:438, y:130 },
+      { text:"Primary Bedroom", sub:"11'11\" × 10'0\"", x:478, y:135 },
       { text:"Kitchen",         sub:"9'10\" × 8'2\"",  x:244, y:385 },
       { text:"WIC",             sub:"",                x:368, y:278 },
       { text:"CL",              sub:"",                x:480, y:223 },
@@ -179,24 +179,23 @@ window.CATALOG = {
 /* =================== LAYOUT BUILDING BLOCKS =================== */
 const C = {
   bedroom: [
-    // Feng Shui "command position": headboard on the solid east wall, diagonal
-    // from the SW door, door visible but not in its direct path.
-    p("rug_8x10",    455, 135),
-    p("bed_queen",   467, 130, 90),
-    p("nightstand",  498, 86,  90),
-    p("nightstand",  498, 174, 90),
-    p("dresser",     379, 116, 90),
+    // Bed on the INSIDE (west) interior wall — the exterior east wall runs a little
+    // off-square and the corner windows take the north/east, so the headboard goes on
+    // the true wall. Queen + frame, two nightstands flanking, facing the windows.
+    p("rug_8x10",    420, 138),
+    p("bed_queen",   408, 138, 90),     // headboard on the west wall, foot toward the windows
+    p("nightstand",  384, 96,  90),
+    p("nightstand",  384, 180, 90),
   ],
   bedroomDesk: [
-    // Same command-position bed on the east wall, but a compact desk tucks under
-    // the north corner window (low, keeps the view) with the dresser below it.
-    p("rug_8x10",    455, 138),
-    p("bed_queen",   467, 132, 90),     // headboard on the solid east wall (command)
-    p("nightstand",  498, 88,  90),
-    p("nightstand",  498, 176, 90),
-    p("desk_compact",398, 82),          // desk under the north window, facing the view
-    p("task_chair",  398, 110),         // Aeron in front
-    p("dresser",     379, 156, 90),     // dresser down the west wall, clear of the desk
+    // Same inside-wall queen + two nightstands, plus a compact desk in the NE corner
+    // tucked under the corner windows with a task chair (the "Bedroom Office" layout).
+    p("rug_8x10",    420, 138),
+    p("bed_queen",   408, 138, 90),
+    p("nightstand",  384, 96,  90),
+    p("nightstand",  384, 180, 90),
+    p("desk_compact",466, 82),          // desk in the NE corner under the corner windows
+    p("task_chair",  466, 112),         // task chair / Aeron in front
   ],
   wic: [
     p("wic_shelf",   352, 245, 90),     // double-hang on both long walls + center aisle
