@@ -1058,10 +1058,10 @@ function suggestionsHTML(){
     <li>The <strong>U-shaped kitchen</strong> peninsula has <em>no seating overhang</em>, but the base is deep on storage — use it for prep and as a serving counter rather than stools. For casual seating, the dining table is two steps away.</li>
   </ul>
 
-  <h2>🛏️ Bedroom (11'8" × 11'0")</h2>
+  <h2>🛏️ Bedroom (11'11" × 10'0")</h2>
   <ul>
-    <li><strong>Queen is the right call</strong> here — a king (76" wide) would crowd an 11' wall once you add nightstands. Queen (60") leaves comfortable ~24" walkways on both sides.</li>
-    <li>Float the headboard on the solid wall (away from the corner windows) so you keep the light and views. Two slim nightstands flank it; the <strong>dresser</strong> goes on the opposite wall or angled in a corner.</li>
+    <li><strong>Queen is the right call</strong> here — a king (76" wide) would crowd a 10' wall once you add nightstands. Queen (60") leaves comfortable ~24" walkways on both sides.</li>
+    <li>Put the headboard on the <strong>inside (interior) wall</strong>, not the exterior wall — that outside wall runs a little off-square, and the corner windows take the other two walls, so the bed sits true and you wake up facing the light. Two slim nightstands flank it.</li>
     <li>Those corner windows are the feature — keep furniture low around them. Consider a bench at the foot instead of a tall piece.</li>
   </ul>
 
