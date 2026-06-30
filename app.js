@@ -274,6 +274,7 @@ function render(){
   ctx.restore();
   drawHandle();
   drawCompass();
+  drawScaleBar(ctx, r.width, r.height, state.scale);
   drawRotBadge();
   if (state.meas) drawMeasureLabel();
   updateHud();
@@ -361,6 +362,7 @@ function exportPNG(){
   octx.save(); octx.translate(state.panX, state.panY); octx.scale(scale, scale);
   try { drawWorld(plan()); } finally {
     octx.restore();
+    drawScaleBar(octx, W, H, scale);                  // scale bar baked into the export
     ctx=_ctx; dpr=_dpr; state.scale=_s; state.panX=_px; state.panY=_py;
     _overlapSet=_ov; state.showGrid=_grid;
     render();                                         // repaint the live canvas
@@ -445,6 +447,26 @@ function drawCompass(){
   ctx.fillStyle = "#5a5046"; ctx.font = "700 9px Inter, sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
   ctx.fillText("N", 0, R-5);
   ctx.restore();
+}
+
+/* Scale bar (bottom-left) — proves the plan is drawn true 1:1. Self-contained so
+   it can render to the screen OR the PNG export. pxPerIn = on-screen px per inch. */
+function drawScaleBar(g, rw, rh, pxPerIn){
+  const pxPerFt = pxPerIn*12;
+  if (!(pxPerFt>0)) return;
+  let ft = 1;                                   // pick a round number of feet ≈ 110px wide
+  for (const t of [1,2,3,5,10,20,30,50]) if (t*pxPerFt <= 130) ft = t;
+  const len = ft*pxPerFt, x0 = 22, y0 = rh - 18;
+  g.save();
+  g.fillStyle = "rgba(255,255,255,.82)";
+  rrG(g, 14, y0-20, len+16, 30, 6); g.fill();
+  g.strokeStyle = "#b9ac98"; g.lineWidth = 1; g.stroke();
+  g.strokeStyle = "#5a5046"; g.fillStyle = "#5a5046"; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(x0,y0-6); g.lineTo(x0,y0); g.lineTo(x0+len,y0); g.lineTo(x0+len,y0-6); g.stroke();
+  g.beginPath(); g.moveTo(x0+len/2,y0); g.lineTo(x0+len/2,y0-4); g.stroke();      // mid tick
+  g.font = "700 10px Inter, sans-serif"; g.textAlign = "center"; g.textBaseline = "alphabetic";
+  g.fillText(ft+" ft", x0+len/2, y0-9);
+  g.restore();
 }
 
 function pathPoly(poly, openOk){
